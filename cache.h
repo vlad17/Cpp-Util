@@ -1,12 +1,9 @@
 /*
 * Vladimir Feinberg
 * cache.h
-* 2013-11-03
+* 2013-11-24
 *
 * Declares generic abstract cache class and its methods.
-* Declares and defines one cache implementation, the heap_cache,
-* which maintains a priority queue in the form a binary heap, allowing
-* for logarithmic-time lookup, insertion.
 */
 
 #ifndef CACHE_H_
@@ -19,6 +16,7 @@ class cache
 {
 protected:
 	cache() {};
+	virtual void _print_cache(std::ostream& o);
 public:
 	typedef Key key_type;
 	typedef Value value_type;
@@ -34,6 +32,21 @@ public:
 	virtual void emplace(Args&& args) = 0;
 	virtual value_type *lookup(const key_type& key) const = 0;
 	virtual void clear() = 0;
+	template<typename K, typename V, typename P>
+	friend std::ostream& operator<<(std::ostream&, const cache<K,V,P>&);
 };
+
+template<typename K, typename V, typename P>
+std::ostream& operator<<(std::ostream& o, const cache<K,V,P>& cache)
+{
+	cache._print_cache(o);
+	return o;
+}
+
+template<typename K, typename V, typename P>
+void cache<K,V,P>::_print_cache(std::ostream& o)
+{
+	o << "cache @ " << this << ", size " << size();
+}
 
 #endif CACHE_H_

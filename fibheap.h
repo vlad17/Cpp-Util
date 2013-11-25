@@ -26,6 +26,7 @@
 #endif
 
 // TODO document header
+// TODO efficient inputiterator?
 // TODO merge (v1)
 // TODO iterator, ordered_iterator (in vector key table version v2)
 // TODO copying (v2)

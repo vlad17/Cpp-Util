@@ -2,9 +2,17 @@
 
 #include "fibheap.h"
 
+#include <vector>
+
 using namespace std;
 
 int main()
+{
+	fibheap_test();
+	return 0;
+}
+
+void fibheap_test()
 {
 	fibheap<int> f;
 	cout << "Add 0..9 in ascending order" << endl;
@@ -93,5 +101,4 @@ int main()
 	cout << moved << endl;
 	cout << "heap value after move:" << endl;
 	cout << f << endl;
-	return 0;
 }
