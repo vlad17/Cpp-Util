@@ -1,15 +1,34 @@
 #include <iostream>
 
 #include "fibheap.h"
+#include "lfu_cache.h"
 
 #include <vector>
 
 using namespace std;
 
+void cache_test(), fibheap_test();
+
 int main()
 {
-	fibheap_test();
+	cache_test();
 	return 0;
+}
+
+void cache_test()
+{
+	cout << "LFU test" << endl;
+	lfu::heap_cache<int, int> lhc;
+	cout << "Adding (0,1), (0,3), (1,2), (2,4)" << endl;
+	lhc.insert(make_pair(0,1));
+	lhc.insert(make_pair(1,2));
+	lhc.insert(make_pair(0,3));
+	lhc.insert(make_pair(2,4));
+	cout << lhc << endl;
+	cout << "Looking up key 3 (should be null): ptr=";
+	cout << lhc.lookup(3) << endl;
+	cout << "Looking up key 0: ";
+	cout << *lhc.lookup(0) << endl;
 }
 
 void fibheap_test()
