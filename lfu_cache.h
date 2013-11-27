@@ -1,11 +1,11 @@
 /*
 * Vladimir Feinberg
 * lfu_cache.h
-* 2013-11-03
+* 2013-11-28
 *
 * Defines heap_cache and linked_cache classes, which are implementations of
 * the abstract cache class that eliminate the least frequently used member
-* when a new element is inserted
+* when a new element is inserted (and space is needed).
 */
 
 #ifndef LFU_CACHE_H_

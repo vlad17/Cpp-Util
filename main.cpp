@@ -1,9 +1,15 @@
+/*
+ * Vladimir Feinberg
+ * main.cpp
+ * 2013-11-24
+ *
+ * Contains some tests for the data structures, prints to stdout.
+ */
+
 #include <iostream>
 
 #include "fibheap.h"
 #include "lfu_cache.h"
-
-#include <vector>
 
 using namespace std;
 
@@ -33,6 +39,7 @@ void cache_test()
 
 void fibheap_test()
 {
+	cout << "Fibheap test" << endl;
 	fibheap<int> f;
 	cout << "Add 0..9 in ascending order" << endl;
 	for(int i = 0; i < 10; ++i)
