@@ -279,15 +279,15 @@ void fibheap<T,C>::_consistency_check() const
 	assert(min != nullptr);
 	assert(min->left != nullptr && min->right != nullptr);
 	assert(min->up == nullptr);
-#if FULLCHECK
+#if FIB_CHECK
 	std::unordered_set<const node*> set;
 	_tree_check(min, set);
-#endif /* FULLCHECK */
+#endif /* FIB_CHECK */
 }
 // does a bfs for L/R nonnull and consistency, adding viewed nodes to
 // the set so that later on lower levels are not linked to higher ones.
 // also checks for parent consistency. Returns num children.
-#if FULLCHECK
+#if FIB_CHECK
 template<typename T, typename C>
 size_t fibheap<T,C>::_tree_check(const node *root,
 		std::unordered_set<const node*>& s)
@@ -314,7 +314,7 @@ size_t fibheap<T,C>::_tree_check(const node *root,
 	} while (n != root);
 	return ctr;
 }
-#endif /* FULLCHECK */
+#endif /* FIB_CHECK */
 
 template<typename T, typename C>
 void fibheap<T,C>::_rl_cut(node *n)

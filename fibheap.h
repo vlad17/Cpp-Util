@@ -13,7 +13,9 @@
 #ifndef FIBHEAP_H_
 #define FIBHEAP_H_
 
-#define FULLCHECK 1
+#ifndef NDEBUG
+#define FIB_CHECK 1
+#endif
 
 #include <list>
 #include <vector>
@@ -21,9 +23,12 @@
 #include <cmath>
 #include <cassert>
 
-#if FULLCHECK
+#if FIB_CHECK
 #include <unordered_set>
 #endif
+
+// TODO print fibheap bfs -> print newlines by putting them into
+// the queue, instead of doing a check.
 
 // TODO document header
 // TODO efficient inputiterator?
@@ -84,10 +89,10 @@ private:
 	static void _copy_subtree(node *cpy, const node *n);
 	inline void _insert_new_node(node *added);
 	void _consistency_check() const;
-#if FULLCHECK
+#if FIB_CHECK
 	static size_t _tree_check(const node *root,
 			std::unordered_set<const node*>& s);
-#endif /* FULLCHECK */
+#endif /* FIB_CHECK */
 	void _print_fibheap(std::ostream& o) const;
 
 	static constexpr const double PHI = 1+sqrt((double) 5)/2;

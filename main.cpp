@@ -35,6 +35,10 @@ void cache_test()
 	cout << lhc.lookup(3) << endl;
 	cout << "Looking up key 0: ";
 	cout << *lhc.lookup(0) << endl;
+	cout << "Looking up key 1 twice: ";
+	cout << *lhc.lookup(1) << endl;
+	cout << *lhc.lookup(1) << endl;
+	cout << lhc << endl;
 }
 
 void fibheap_test()

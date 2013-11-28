@@ -9,6 +9,10 @@
 #ifndef CACHE_H_
 #define CACHE_H_
 
+#ifndef NDEBUG
+#define HCACHE_CHECK 1
+#endif
+
 // TODO document what everything should do
 
 template<typename Key, typename Value, typename Pred = std::equal_to<Key> >
@@ -47,7 +51,7 @@ std::ostream& operator<<(std::ostream& o, const cache<K,V,P>& cache)
 template<typename K, typename V, typename P>
 void cache<K,V,P>::_print_cache(std::ostream& o) const
 {
-	o << "cache @ " << this << ", size " << size();
+	o << "cache @ " << this << ", size " << size() << '\n';
 }
 
 #endif /* CACHE_H_ */
