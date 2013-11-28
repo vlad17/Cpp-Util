@@ -50,4 +50,4 @@ void cache<K,V,P>::_print_cache(std::ostream& o) const
 	o << "cache @ " << this << ", size " << size();
 }
 
-#endif CACHE_H_
+#endif /* CACHE_H_ */

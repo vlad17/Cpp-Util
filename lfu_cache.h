@@ -17,15 +17,13 @@
 
 #include "cache.h"
 
-
-// Value should be moveable (or a pointer)
-
 namespace lfu
 {
-	// TODO maxsize w/ force remove
-	// TODO setsize, just use -1 default.
+	// document lfu is approximate.
+	// TODO have hash key be pointer to item key.
 	// TODO replace
 	// TODO consistency
+	// TODO printing and testing
 	template<typename Key, typename Value, typename Pred = std::equal_to<Key>,
 		typename Hash = std::hash<Key> >
 	class heap_cache : public cache<Key, Value, Pred>
@@ -33,10 +31,13 @@ namespace lfu
 	private:
 		struct citem
 		{
-			citem(Value&& v, size_t loc) :
-				val(std::forward<Value>(v)), loc(loc), count(0) {}
-			citem(const Value& v, size_t loc) :
-				val(v), loc(loc), count(0) {}
+			typedef typename cache<Key, Value, Pred>::kv_type kv_type;
+			citem(kv_type&& kv, size_t loc) :
+				key(std::forward<Key>(kv.first)), val(std::forward<Value>(kv.second)),
+				loc(loc), count(0) {}
+			citem(const kv_type& kv, size_t loc) :
+				key(kv.first), val(kv.second), loc(loc), count(0) {}
+			Key key;
 			Value val;
 			size_t loc;
 			size_t count;
@@ -44,7 +45,9 @@ namespace lfu
 		mutable std::unordered_map<Key, citem*, Hash, Pred> keymap;
 		mutable std::vector<citem*> heap;
 		static Hash hashf;
+		void _del_back();
 		void increase_key(citem *c) const;
+		size_t max_size;
 	public:
 		typedef cache<Key, Value, Pred> base_type;
 		typedef typename base_type::key_type key_type;
@@ -55,16 +58,22 @@ namespace lfu
 		typedef Hash hasher;
 		// push back dummy value to allow easy heap access.
 		heap_cache():
-			keymap(), heap() {heap.push_back(nullptr);}
+			 keymap(), heap(), max_size(-1) {heap.push_back(nullptr);}
+		heap_cache(size_t max):
+			 keymap(), heap(), max_size(max) {heap.push_back(nullptr);}
 		// TODO inputiterator + efficient
 		virtual ~heap_cache() {};
 		virtual bool empty() const;
 		virtual size_type size() const; // not max size, current size
+		// Returns true if value added without any removals
+		// returns false if lfu kicked out if no room or if
+		// item replaced for having the same key.
 		virtual bool insert(const kv_type& kv);
 		virtual bool insert(kv_type&& kv);
+		virtual bool contains(const key_type& key) const;
 		virtual value_type *lookup(const key_type& key) const;
 		virtual void clear();
-		//void trim_to_size(size_t size);
+		void set_max_size(size_t size);
 		hasher hash_function() const {return hashf;}
 	};
 }
@@ -72,36 +81,59 @@ namespace lfu
 template<typename K, typename V, typename P, typename H>
 bool lfu::heap_cache<K,V,P,H>::empty() const
 {
-	return heap.empty();
+	return keymap.empty();
 }
 
 template<typename K, typename V, typename P, typename H>
 auto lfu::heap_cache<K,V,P,H>::size() const -> size_type
 {
-	return heap.size();
+	return keymap.size();
 }
 
 template<typename K, typename V, typename P, typename H>
 bool lfu::heap_cache<K,V,P,H>::insert(const kv_type& kv)
 {
-	citem *valp = new citem(kv.second, heap.size());
-	auto mappair = keymap.insert(std::make_pair(kv.first, valp));
-	if(!mappair.second)
-		return false;
-	heap.push_back(mappair.first->second);
-	return true;
+	if(max_size == 0) return false;
+	citem *valp = new citem(kv, heap.size());
+	citem *& mapped = keymap[valp->key];
+	if(mapped == nullptr)
+	{
+		if(keymap.size() == max_size)
+			_del_back();
+		mapped = valp;
+		heap.push_back(valp);
+		return true;
+	}
+	delete mapped;
+	mapped = valp;
+	heap.push_back(valp);
+	return false;
 }
 
 template<typename K, typename V, typename P, typename H>
 bool lfu::heap_cache<K,V,P,H>::insert(kv_type&& kv)
 {
-	citem *valp = new citem(std::move(kv.second), heap.size());
-	auto mappair = keymap.insert(
-			std::make_pair(std::move(kv.first), valp));
-	if(!mappair.second)
-		return false;
-	heap.push_back(mappair.first->second);
-	return true;
+	if(max_size == 0) return false;
+	citem *valp = new citem(std::forward<kv_type>(kv), heap.size());
+	citem *& mapped = keymap[valp->key];
+	if(mapped == nullptr)
+	{
+		if(keymap.size() == max_size)
+			_del_back();
+		mapped = valp;
+		heap.push_back(valp);
+		return true;
+	}
+	delete mapped;
+	mapped = valp;
+	heap.push_back(valp);
+	return false;
+}
+
+template<typename K, typename V, typename P, typename H>
+bool lfu::heap_cache<K,V,P,H>::contains(const key_type& key) const
+{
+	return keymap.find(key) != keymap.end();
 }
 
 template<typename K, typename V, typename P, typename H>
@@ -114,7 +146,34 @@ auto lfu::heap_cache<K,V,P,H>::lookup(const key_type& key) const -> value_type*
 	return &access->second->val;
 }
 
+template<typename K, typename V, typename P, typename H>
+void lfu::heap_cache<K,V,P,H>::clear()
+{
+	for(auto i : heap) delete i;
+	heap.clear();
+	keymap.clear();
+}
+
+template<typename K, typename V, typename P, typename H>
+void lfu::heap_cache<K,V,P,H>::set_max_size(size_t max)
+{
+	max_size = max;
+	if(max < heap.size()-1)
+		while(heap.size() != max) // note +1 index, stop at max.
+			_del_back();
+}
+
 // ---- helper methods
+
+// swaps increased key until heap property is restored, returns
+template<typename K, typename V, typename P, typename H>
+void lfu::heap_cache<K,V,P,H>::_del_back()
+{
+	assert(heap.size() > 1);
+	keymap.erase(heap.back()->key);
+	delete heap.back();
+	heap.pop_back();
+}
 
 // swaps increased key until heap property is restored, returns
 template<typename K, typename V, typename P, typename H>
@@ -134,14 +193,6 @@ void lfu::heap_cache<K,V,P,H>::increase_key(citem *c) const
 		c->loc/=2;
 		increase_key(c);
 	}
-}
-
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::clear()
-{
-	for(auto i : heap) delete i;
-	heap.clear();
-	keymap.clear();
 }
 
 #endif /* LFU_CACHE_H_ */
