@@ -1,7 +1,7 @@
 /*
 * Vladimir Feinberg
 * lfu_cache.h
-* 2013-11-28
+* 2013-11-29
 *
 * Defines heap_cache and linked_cache classes, which are implementations of
 * the abstract cache class that eliminate the least frequently used member
@@ -19,11 +19,7 @@
 
 namespace lfu
 {
-	// document lfu is approximate.
-	// TODO have hash key be pointer to item key (requires new hash functor)
-	// TODO replace
-	// TODO consistency
-	// TODO testing
+	// TODO document lfu is approximate.
 	template<typename Key, typename Value, typename Pred = std::equal_to<Key>,
 		typename Hash = std::hash<Key> >
 	class heap_cache : public cache<Key, Value, Pred>
@@ -64,6 +60,7 @@ namespace lfu
 		heap_cache(size_t max):
 			 keymap(), heap(), max_size(max) {heap.push_back(nullptr);}
 		// TODO inputiterator + efficient
+		// TODO move, copy
 		virtual ~heap_cache() {};
 		virtual bool empty() const;
 		virtual size_type size() const; // not max size, current size

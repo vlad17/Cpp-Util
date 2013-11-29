@@ -52,6 +52,7 @@ fibheap<T,C>& fibheap<T,C>::operator=(const fibheap<T,C>& other)
 template<typename T, typename C>
 fibheap<T,C>& fibheap<T,C>::operator=(fibheap<T,C>&& other)
 {
+	clear();
 	min = other.min;
 	_size = other._size;
 	comp = std::move(other.comp);

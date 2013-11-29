@@ -36,7 +36,7 @@ public:
 	virtual bool insert(kv_type&& kv) = 0;
 	virtual value_type *lookup(const key_type& key) const = 0;
 	virtual void clear() = 0;
-	key_equal key_eq() {return key_comp;}
+	static key_equal key_eq() {return key_comp;}
 	template<typename K, typename V, typename P>
 	friend std::ostream& operator<<(std::ostream&, const cache<K,V,P>&);
 };
