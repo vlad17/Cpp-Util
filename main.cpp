@@ -25,6 +25,7 @@ int main()
 void cache_test()
 {
 	cout << "LFU test" << endl;
+	cout << "\nheap_cache test" << endl;
 	lfu::heap_cache<int, int> lhc;
 	cout << "Adding (0,1), (0,3) - replace - , (1,2), (2,4)" << endl;
 	lhc.insert(make_pair(0,1));
@@ -61,6 +62,24 @@ void cache_test()
 	cout << "Try to insert new item (128,128)" << endl;
 	lhc.insert(make_pair(128,128));
 	cout << lhc << endl;
+	cout << "Generate smaller cache" << endl;
+	lfu::heap_cache<int,int> lhc2;
+	cout << lhc2 << endl;
+	cout << "Add (i,i) up to 10, lookup randomly." << endl;
+	for(int i = 0; i < 10; ++i)
+		lhc2.insert(make_pair(i,i));
+	for(int i = 0; i < 20; ++i)
+		lhc2.lookup(gen()%10);
+	cout << lhc2 << endl;
+	cout << "copy this new cache to old one. Old one:" << endl;
+	lhc = lhc2;
+	cout << lhc << endl;
+	cout << "second cache that was copied from after copy:" << endl;
+	cout << lhc2 << endl;
+	cout << "move newly copied old one to previous new one. After move (to assigned):" << endl;
+	lhc2 = std::move(lhc);
+	cout << lhc2 << endl;
+	cout << "after move (from assignment value) - size: " << lhc.size() << endl;
 }
 
 void fibheap_test()

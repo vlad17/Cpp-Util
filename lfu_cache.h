@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <vector>
 #include <cassert>
+#include <algorithm>
 
 #include "cache.h"
 
@@ -29,7 +30,7 @@ namespace lfu
 		{
 			typedef typename cache<Key, Value, Pred>::kv_type kv_type;
 			citem(kv_type&& kv, size_t loc) :
-				key(std::forward<Key>(kv.first)), val(std::forward<Value>(kv.second)),
+				key(std::move(kv.first)), val(std::move(kv.second)),
 				loc(loc), count(0) {}
 			citem(const kv_type& kv, size_t loc) :
 				key(kv.first), val(kv.second), loc(loc), count(0) {}
@@ -37,6 +38,8 @@ namespace lfu
 			Value val;
 			size_t loc;
 			size_t count;
+			const kv_type& kvpair() const
+			{return *reinterpret_cast<const kv_type*>(&key);}
 		};
 		mutable std::unordered_map<Key, citem*, Hash, Pred> keymap;
 		mutable std::vector<citem*> heap;
@@ -54,15 +57,14 @@ namespace lfu
 		typedef typename base_type::kv_type kv_type;
 		typedef typename base_type::size_type size_type;
 		typedef Hash hasher;
-		// push back dummy value to allow easy heap access.
-		heap_cache():
-			 keymap(), heap(), max_size(-1) {heap.push_back(nullptr);}
-		heap_cache(size_t max):
+		heap_cache(size_t max = -1):
 			 keymap(), heap(), max_size(max) {heap.push_back(nullptr);}
-		// TODO efficient inputiterator constructor (use make_heap)
-		// TODO copy constructor
-		// TODO move constructor
-		// TODO copy/move assignment
+		heap_cache(const heap_cache& other) :
+			heap_cache(0) {*this = other;}
+		heap_cache(heap_cache&& other) :
+			heap_cache(0) {*this = std::forward(other);}
+		heap_cache& operator=(const heap_cache& other);
+		heap_cache& operator=(heap_cache&& other);
 		virtual ~heap_cache() {};
 		virtual bool empty() const;
 		virtual size_type size() const; // not max size, current size
@@ -82,6 +84,34 @@ namespace lfu
 	// LFU)
 
 	// TODO linked_cache (exact, best amortized, nonlocal)
+}
+
+template<typename K, typename V, typename P, typename H>
+auto lfu::heap_cache<K,V,P,H>::operator=(const heap_cache& other) -> heap_cache&
+{
+	if(this == &other) return *this;
+	clear();
+	if(other.empty()) return *this;
+	max_size = other.max_size;
+	heap.reserve(other.heap.size());
+	for(auto it = ++other.heap.begin(); it != other.heap.end(); ++it)
+	{
+		auto i = *it;
+		heap.push_back(new citem(i->kvpair(), i->loc));
+		heap.back()->count = i->count;
+		keymap.insert(std::make_pair(heap.back()->key, heap.back()));
+	}
+	return *this;
+}
+
+template<typename K, typename V, typename P, typename H>
+auto lfu::heap_cache<K,V,P,H>::operator=(heap_cache&& other) -> heap_cache&
+{
+	clear();
+	max_size = other.max_size;
+	heap = std::move(other.heap);
+	keymap = std::move(other.keymap);
+	return *this;
 }
 
 template<typename K, typename V, typename P, typename H>
