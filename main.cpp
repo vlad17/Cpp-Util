@@ -11,6 +11,7 @@
 #include "fibheap.h"
 #include "lfu_cache.h"
 #include <random>
+#include <array>
 
 using namespace std;
 
@@ -77,9 +78,26 @@ void cache_test()
 	cout << "second cache that was copied from after copy:" << endl;
 	cout << lhc2 << endl;
 	cout << "move newly copied old one to previous new one. After move (to assigned):" << endl;
-	lhc2 = std::move(lhc);
+	lhc2 = move(lhc);
 	cout << lhc2 << endl;
 	cout << "after move (from assignment value) - size: " << lhc.size() << endl;
+	cout << "stress tests...." << endl;
+	lhc2.clear();
+#ifdef NDEBUG
+	int constexpr STRESS_REPS = 10000000;
+#else
+	int constexpr STRESS_REPS = 100000;
+#endif
+	int constexpr MAX_KEYSIZE = STRESS_REPS/100;
+	for(int i = 0; i < STRESS_REPS; ++i)
+	{
+		int test = gen()%MAX_KEYSIZE;
+		auto ptrtest = lhc2.lookup(test);
+		if(ptrtest != nullptr && *ptrtest != test)
+				cout << "\tError: value " << test << " not matched with key" << endl;
+		lhc2.insert(make_pair(test,test));
+	}
+	cout << "...Completed" << endl;
 }
 
 void fibheap_test()

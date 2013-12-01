@@ -135,14 +135,16 @@ bool lfu::heap_cache<K,V,P,H>::insert(const kv_type& kv)
 	citem *& mapped = keymap[valp->key];
 	if(mapped == nullptr)
 	{
+		bool retval = true;
 		if(keymap.size() == max_size)
 		{
 			_del_back();
 			--valp->loc;
+			retval = false;
 		}
 		mapped = valp;
 		heap.push_back(valp);
-		return true;
+		return retval;
 	}
 	heap[mapped->loc] = valp;
 	valp->loc = mapped->loc;
