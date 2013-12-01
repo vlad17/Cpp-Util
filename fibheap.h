@@ -117,8 +117,8 @@ public:
 		{*this = std::forward<fibheap<T, Compare> >(other);}
 	~fibheap();
 	// Assignment
-	fibheap& operator=(const fibheap& other); // deep copy
-	fibheap& operator=(fibheap&& other); // shallow copy
+	fibheap& operator=(const fibheap& other);
+	fibheap& operator=(fibheap&& other);
 	// Methods
 	inline bool empty() const {return min == nullptr;}
 	inline size_t size() const {return _size;}

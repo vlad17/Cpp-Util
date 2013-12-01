@@ -7,9 +7,12 @@ know and then I'll get to documenting the code and making what needs to be done
 clear.
 
 TODO:
+	cache constructors/moves
 	cache testing
 	documentation
 	inline small functions
+	fibheap (check file for TODOs)
+	different lfu cache implementations (see file)
 	valgrind check
 	Micro-optimize - save size() variables on stack, inline (research
 		how getters get inlined)

@@ -10,6 +10,7 @@
 
 #include "fibheap.h"
 #include "lfu_cache.h"
+#include <random>
 
 using namespace std;
 
@@ -17,7 +18,7 @@ void cache_test(), fibheap_test();
 
 int main()
 {
-	fibheap_test();
+	cache_test();
 	return 0;
 }
 
@@ -25,12 +26,13 @@ void cache_test()
 {
 	cout << "LFU test" << endl;
 	lfu::heap_cache<int, int> lhc;
-	cout << "Adding (0,1), (0,3), (1,2), (2,4)" << endl;
+	cout << "Adding (0,1), (0,3) - replace - , (1,2), (2,4)" << endl;
 	lhc.insert(make_pair(0,1));
 	lhc.insert(make_pair(1,2));
 	lhc.insert(make_pair(0,3));
 	lhc.insert(make_pair(2,4));
 	cout << lhc << endl;
+	cout << "Empty: " << lhc.empty() << endl;
 	cout << "Looking up key 3 (should be null): ptr=";
 	cout << lhc.lookup(3) << endl;
 	cout << "Looking up key 0: ";
@@ -38,6 +40,26 @@ void cache_test()
 	cout << "Looking up key 1 twice: ";
 	cout << *lhc.lookup(1) << ", ";
 	cout << *lhc.lookup(1) << endl;
+	cout << lhc << endl;
+	cout << "Set to max size 1" << endl;
+	lhc.set_max_size(1);
+	cout << lhc << endl;
+	cout << "Clear:" << endl;
+	lhc.clear();
+	cout << lhc << endl;
+	cout << "Empty: " << lhc.empty();
+	cout << "set max. size 128, fill" << endl;
+	lhc.set_max_size(128);
+	for(int i = 0; i < 128; ++i)
+		lhc.insert(make_pair(i,i));
+	cout << lhc << endl;
+	cout << "Lookup 500 times, randomly." << endl;
+	minstd_rand0 gen(0);
+	for(int i = 0; i < 500; ++i)
+		lhc.lookup(gen()&127);
+	cout << lhc << endl;
+	cout << "Try to insert new item (128,128)" << endl;
+	lhc.insert(make_pair(128,128));
 	cout << lhc << endl;
 }
 

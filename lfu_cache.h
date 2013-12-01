@@ -19,7 +19,7 @@
 
 namespace lfu
 {
-	// TODO document lfu is approximate.
+	// TODO document lfu is approximate (max ordered)
 	template<typename Key, typename Value, typename Pred = std::equal_to<Key>,
 		typename Hash = std::hash<Key> >
 	class heap_cache : public cache<Key, Value, Pred>
@@ -59,8 +59,10 @@ namespace lfu
 			 keymap(), heap(), max_size(-1) {heap.push_back(nullptr);}
 		heap_cache(size_t max):
 			 keymap(), heap(), max_size(max) {heap.push_back(nullptr);}
-		// TODO inputiterator + efficient
-		// TODO move, copy
+		// TODO efficient inputiterator constructor (use make_heap)
+		// TODO copy constructor
+		// TODO move constructor
+		// TODO copy/move assignment
 		virtual ~heap_cache() {};
 		virtual bool empty() const;
 		virtual size_type size() const; // not max size, current size
@@ -75,6 +77,11 @@ namespace lfu
 		void set_max_size(size_t size);
 		hasher hash_function() const {return hashf;}
 	};
+
+	// TODO exact_heap_cache (min ordered at top, always removes exactly
+	// LFU)
+
+	// TODO linked_cache (exact, best amortized, nonlocal)
 }
 
 template<typename K, typename V, typename P, typename H>
@@ -163,6 +170,7 @@ void lfu::heap_cache<K,V,P,H>::clear()
 	for(auto i : heap) delete i;
 	heap.clear();
 	keymap.clear();
+	heap.push_back(nullptr);
 }
 
 template<typename K, typename V, typename P, typename H>

@@ -25,12 +25,10 @@ fibheap<T,C>::~fibheap()
 template<typename T, typename C>
 fibheap<T,C>& fibheap<T,C>::operator=(const fibheap<T,C>& other)
 {
+	if(this == &other) return *this;
+	clear();
 	comp = other.comp;
-	if(other.empty())
-	{
-		clear();
-		return *this;
-	}
+	if(other.empty()) return *this;
 	_size = other._size;
 	min = new node(other.min->val);
 	_copy_subtree(min, other.min);
