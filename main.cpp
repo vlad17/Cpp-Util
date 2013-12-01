@@ -97,6 +97,7 @@ void cache_test()
 				cout << "\tError: value " << test << " not matched with key" << endl;
 		lhc2.insert(make_pair(test,test));
 	}
+	lhc2.lookup(0);
 	cout << "...Completed" << endl;
 }
 

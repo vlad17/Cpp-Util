@@ -7,6 +7,12 @@
 */
 
 template<typename K, typename V, typename P, typename H>
+lfu::heap_cache<K,V,P,H>::~heap_cache()
+{	
+	for(auto i : heap) delete i;
+}
+
+template<typename K, typename V, typename P, typename H>
 auto lfu::heap_cache<K,V,P,H>::operator=(const heap_cache& other) -> heap_cache&
 {
 	if(this == &other) return *this;
@@ -27,6 +33,7 @@ auto lfu::heap_cache<K,V,P,H>::operator=(const heap_cache& other) -> heap_cache&
 template<typename K, typename V, typename P, typename H>
 auto lfu::heap_cache<K,V,P,H>::operator=(heap_cache&& other) -> heap_cache&
 {
+	assert(this != &other);
 	clear();
 	max_size = other.max_size;
 	heap = std::move(other.heap);
@@ -128,7 +135,7 @@ void lfu::heap_cache<K,V,P,H>::clear()
 }
 
 template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::set_max_size(size_t max)
+void lfu::heap_cache<K,V,P,H>::set_max_size(size_type max)
 {
 	_consistency_check();
 	max_size = max;
@@ -154,7 +161,7 @@ void lfu::heap_cache<K,V,P,H>::_del_back_full()
 	// below 4 it's not worth it
 	if(max_size <= 4) _del_back();
 	else
-		for(size_t i = max_size>>1; i < max_size; ++i)
+		for(size_type i = max_size>>1; i < max_size; ++i)
 			_del_back();
 }
 
@@ -187,7 +194,7 @@ void lfu::heap_cache<K,V,P,H>::_consistency_check() const
 	assert(keymap.size() + 1 == heap.size());
 	assert(heap[0] == nullptr);
 #ifdef HCACHE_CHECK
-	for(size_t i = keymap.size(); i > 1; --i)
+	for(size_type i = keymap.size(); i > 1; --i)
 	{
 		assert(heap[i] != nullptr);
 		assert(heap[i/2] != nullptr);
@@ -202,9 +209,9 @@ void lfu::heap_cache<K,V,P,H>::_print_cache(std::ostream& o) const
 	_consistency_check();
 	base_type::_print_cache(o);
 	if(empty()) return;
-	for(size_t i = 0; i < (size_t) (log(keymap.size()-1)/log(2))+1; ++i)
+	for(size_type i = 0; i < (size_type) (log(keymap.size()-1)/log(2))+1; ++i)
 	{
-		for(size_t j = pow(2, i); j <= pow(2, i+1)-1; ++j)
+		for(size_type j = pow(2, i); j <= pow(2, i+1)-1; ++j)
 		{
 			if(j > keymap.size()) break;
 			o << '(' << heap[j]->key << "->" << heap[j]->val << ',';

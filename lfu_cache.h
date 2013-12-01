@@ -1,11 +1,12 @@
 /*
 * Vladimir Feinberg
 * lfu_cache.h
-* 2013-11-29
+* 2013-12-01
 *
-* Defines heap_cache and linked_cache classes, which are implementations of
-* the abstract cache class that eliminate the least frequently used member
-* when a new element is inserted (and space is needed).
+* Defines heap_cache, exact_heap_cache, and linked_cache classes,
+* which are implementations of the abstract cache class that eliminate
+* the least frequently used member when a new element is inserted
+* (and space is needed).
 */
 
 #ifndef LFU_CACHE_H_
@@ -33,7 +34,10 @@ namespace lfu
 	 * Lookup needs to maintain the heap property, so it may be O(log n).
 	 *
 	 * heap_cache<Key, Value, Pred, Hash>
-	 * Key - key type -
+	 * Key - key type - should be quick to copy (several are made)
+	 * Value - value type - type key maps to. Copied/moved once.
+	 * Pred - equal-to predicate for keys
+	 * Hash - hash for keys.
 	 */
 	template<typename Key, typename Value, typename Pred = std::equal_to<Key>,
 		typename Hash = std::hash<Key> >
@@ -63,8 +67,9 @@ namespace lfu
 		void increase_key(citem *c) const;
 		void _consistency_check() const;
 		void _print_cache(std::ostream& o) const;
-		size_t max_size;
+		typename cache<Key, Value, Pred>::size_type max_size;
 	public:
+		// Public typedefs
 		typedef cache<Key, Value, Pred> base_type;
 		typedef typename base_type::key_type key_type;
 		typedef typename base_type::value_type value_type;
@@ -72,15 +77,52 @@ namespace lfu
 		typedef typename base_type::kv_type kv_type;
 		typedef typename base_type::size_type size_type;
 		typedef Hash hasher;
-		heap_cache(size_t max = -1):
+
+		// Constructors/Destructor
+		/*
+		 * INPUT:
+		 * size_type max = -1 - maximum initial size
+		 * PRECONDITION:
+		 * max > 0
+		 * BEHAVIOR:
+		 * Generates an empty heap_cache with specified max size.
+		 */
+		heap_cache(size_type max = -1):
 			 keymap(), heap(), max_size(max) {heap.push_back(nullptr);}
+		/*
+		 * INPUT:
+		 * const heap_cache& other - heap cache to copy from
+		 * BEHAVIOR:
+		 * Makes a deep copy of other.
+		 */
 		heap_cache(const heap_cache& other) :
-			heap_cache(0) {*this = other;}
+			heap_cache(1) {*this = other;}
+		/*
+		 * INPUT:
+		 * heap_cache&& other - heap cache to move from
+		 * BEHAVIOR:
+		 * Moves (deletes and shallow-copies) other.
+		 */
 		heap_cache(heap_cache&& other) :
-			heap_cache(0) {*this = std::forward(other);}
+			heap_cache(1) {*this = std::forward(other);}
+		/*
+		 * INPUT:
+		 * BEHAVIOR:
+		 * Destroys cache, deallocating all owned memory.
+		 */
+		virtual ~heap_cache();
+
+		// Methods
+		/*
+		 * INPUT:
+		 * const heap_cache& other -
+		 * PRECONDITION:
+		 * BEHAVIOR:
+		 * RETURN:
+		 * Reference to this.
+		 */
 		heap_cache& operator=(const heap_cache& other);
 		heap_cache& operator=(heap_cache&& other);
-		virtual ~heap_cache() {};
 		virtual bool empty() const;
 		virtual size_type size() const; // not max size, current size
 		// Returns true if value added without any removals
@@ -91,9 +133,12 @@ namespace lfu
 		virtual bool contains(const key_type& key) const;
 		virtual value_type *lookup(const key_type& key) const;
 		virtual void clear();
-		void set_max_size(size_t size);
+		void set_max_size(size_type size);
 		hasher hash_function() const {return hashf;}
 	};
+
+	// TODO local_heap_cache (identical to heap_cache, but uses vector
+	// to store the citems)
 
 	// TODO exact_heap_cache (min ordered at top, always removes exactly
 	// LFU)
