@@ -20,7 +20,21 @@
 
 namespace lfu
 {
-	// TODO document lfu is approximate (max ordered)
+	/*
+	 * A heap_cache is a type which acts as an approximate least frequently used
+	 * (lfu) container. The cache, when set to have a maximum size, will fill up
+	 * and clear the least frequently used members in "chunks" - the last
+	 * max_size/2 members are removed when capacity is overfilled.
+	 *
+	 * In this manner, the insertion (and cache auto-clearing) is amortized O(1)
+	 * time - since it will take as many constant-time insertions to require
+	 * a linear-time removal. Worst-case is O(n).
+	 *
+	 * Lookup needs to maintain the heap property, so it may be O(log n).
+	 *
+	 * heap_cache<Key, Value, Pred, Hash>
+	 * Key - key type -
+	 */
 	template<typename Key, typename Value, typename Pred = std::equal_to<Key>,
 		typename Hash = std::hash<Key> >
 	class heap_cache : public cache<Key, Value, Pred>
@@ -45,6 +59,7 @@ namespace lfu
 		mutable std::vector<citem*> heap;
 		static Hash hashf;
 		void _del_back();
+		void _del_back_full();
 		void increase_key(citem *c) const;
 		void _consistency_check() const;
 		void _print_cache(std::ostream& o) const;
@@ -86,201 +101,6 @@ namespace lfu
 	// TODO linked_cache (exact, best amortized, nonlocal)
 }
 
-template<typename K, typename V, typename P, typename H>
-auto lfu::heap_cache<K,V,P,H>::operator=(const heap_cache& other) -> heap_cache&
-{
-	if(this == &other) return *this;
-	clear();
-	if(other.empty()) return *this;
-	max_size = other.max_size;
-	heap.reserve(other.heap.size());
-	for(auto it = ++other.heap.begin(); it != other.heap.end(); ++it)
-	{
-		auto i = *it;
-		heap.push_back(new citem(i->kvpair(), i->loc));
-		heap.back()->count = i->count;
-		keymap.insert(std::make_pair(heap.back()->key, heap.back()));
-	}
-	return *this;
-}
-
-template<typename K, typename V, typename P, typename H>
-auto lfu::heap_cache<K,V,P,H>::operator=(heap_cache&& other) -> heap_cache&
-{
-	clear();
-	max_size = other.max_size;
-	heap = std::move(other.heap);
-	keymap = std::move(other.keymap);
-	return *this;
-}
-
-template<typename K, typename V, typename P, typename H>
-bool lfu::heap_cache<K,V,P,H>::empty() const
-{
-	return keymap.empty();
-}
-
-template<typename K, typename V, typename P, typename H>
-auto lfu::heap_cache<K,V,P,H>::size() const -> size_type
-{
-	return keymap.size();
-}
-
-template<typename K, typename V, typename P, typename H>
-bool lfu::heap_cache<K,V,P,H>::insert(const kv_type& kv)
-{
-	_consistency_check();
-	if(max_size == 0) return false;
-	citem *valp = new citem(kv, heap.size());
-	citem *& mapped = keymap[valp->key];
-	if(mapped == nullptr)
-	{
-		bool retval = true;
-		if(keymap.size() == max_size)
-		{
-			_del_back();
-			--valp->loc;
-			retval = false;
-		}
-		mapped = valp;
-		heap.push_back(valp);
-		return retval;
-	}
-	heap[mapped->loc] = valp;
-	valp->loc = mapped->loc;
-	delete mapped;
-	mapped = valp;
-	return false;
-}
-
-template<typename K, typename V, typename P, typename H>
-bool lfu::heap_cache<K,V,P,H>::insert(kv_type&& kv)
-{
-	_consistency_check();
-	if(max_size == 0) return false;
-	citem *valp = new citem(std::forward<kv_type>(kv), heap.size());
-	citem *& mapped = keymap[valp->key];
-	if(mapped == nullptr)
-	{
-		if(keymap.size() == max_size)
-		{
-			_del_back();
-			--valp->loc;
-		}
-		mapped = valp;
-		heap.push_back(valp);
-		return true;
-	}
-	heap[mapped->loc] = valp;
-	valp->loc = mapped->loc;
-	delete mapped;
-	mapped = valp;
-	return false;
-}
-
-template<typename K, typename V, typename P, typename H>
-bool lfu::heap_cache<K,V,P,H>::contains(const key_type& key) const
-{
-	return keymap.find(key) != keymap.end();
-}
-
-template<typename K, typename V, typename P, typename H>
-auto lfu::heap_cache<K,V,P,H>::lookup(const key_type& key) const -> value_type*
-{
-	_consistency_check();
-	auto access = keymap.find(key);
-	if(access == keymap.end()) return nullptr;
-	++access->second->count;
-	increase_key(access->second);
-	return &access->second->val;
-}
-
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::clear()
-{
-	_consistency_check();
-	for(auto i : heap) delete i;
-	heap.clear();
-	keymap.clear();
-	heap.push_back(nullptr);
-}
-
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::set_max_size(size_t max)
-{
-	_consistency_check();
-	max_size = max;
-	if(max < heap.size()-1)
-		while(heap.size() != max) // note +1 index, stop at max.
-			_del_back();
-}
-
-// ---- helper methods
-
-// swaps increased key until heap property is restored, returns
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::_del_back()
-{
-	assert(heap.size() > 1);
-	keymap.erase(heap.back()->key);
-	delete heap.back();
-	heap.pop_back();
-}
-
-// swaps increased key until heap property is restored, returns
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::increase_key(citem *c) const
-{
-	assert(c != nullptr);
-	assert(c->loc < heap.size());
-	assert(c->loc > 0);
-	if(c->loc == 1) return;
-	citem *parent = heap[c->loc/2];
-	assert(parent != nullptr);
-	if(parent->count < c->count)
-	{
-		heap[parent->loc] = c;
-		heap[c->loc] = parent;
-		parent->loc = c->loc;
-		c->loc/=2;
-		increase_key(c);
-	}
-}
-
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::_consistency_check() const
-{
-	assert(heap.size() >= 1);
-	assert(max_size >= heap.size()-1);
-	assert(max_size >= keymap.size());
-	assert(keymap.size() + 1 == heap.size());
-	assert(heap[0] == nullptr);
-#ifdef HCACHE_CHECK
-	for(size_t i = keymap.size(); i > 1; --i)
-	{
-		assert(heap[i] != nullptr);
-		assert(heap[i/2] != nullptr);
-		assert(heap[i]->count <= heap[i/2]->count);
-	}
-#endif
-}
-
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::_print_cache(std::ostream& o) const
-{
-	_consistency_check();
-	base_type::_print_cache(o);
-	if(empty()) return;
-	for(size_t i = 0; i < (size_t) (log(keymap.size()-1)/log(2))+1; ++i)
-	{
-		for(size_t j = pow(2, i); j <= pow(2, i+1)-1; ++j)
-		{
-			if(j > keymap.size()) break;
-			o << '(' << heap[j]->key << "->" << heap[j]->val << ',';
-			o << heap[j]->count << ") ";
-		}
-		o << '\n';
-	}
-}
+#include "heap_cache.tpp"
 
 #endif /* LFU_CACHE_H_ */

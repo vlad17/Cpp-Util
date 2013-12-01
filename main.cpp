@@ -49,7 +49,7 @@ void cache_test()
 	cout << "Clear:" << endl;
 	lhc.clear();
 	cout << lhc << endl;
-	cout << "Empty: " << lhc.empty();
+	cout << "Empty: " << lhc.empty() << endl;
 	cout << "set max. size 128, fill" << endl;
 	lhc.set_max_size(128);
 	for(int i = 0; i < 128; ++i)
