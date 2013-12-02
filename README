@@ -7,8 +7,6 @@ know and then I'll get to documenting the code and making what needs to be done
 clear.
 
 TODO:
-	cache constructors/moves
-	cache testing
 	documentation
 	inline small functions
 	fibheap (check file for TODOs)

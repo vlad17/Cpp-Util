@@ -1,7 +1,7 @@
 /*
 * Vladimir Feinberg
 * lfu_cache.h
-* 2013-12-01
+* 2013-12-02
 *
 * Defines heap_cache, exact_heap_cache, and linked_cache classes,
 * which are implementations of the abstract cache class that eliminate
@@ -67,7 +67,7 @@ namespace lfu
 		void increase_key(citem *c) const;
 		void _consistency_check() const;
 		void _print_cache(std::ostream& o) const;
-		typename cache<Key, Value, Pred>::size_type max_size;
+		size_t max_size;
 	public:
 		// Public typedefs
 		typedef cache<Key, Value, Pred> base_type;
@@ -75,19 +75,18 @@ namespace lfu
 		typedef typename base_type::value_type value_type;
 		typedef typename base_type::key_equal key_equal;
 		typedef typename base_type::kv_type kv_type;
-		typedef typename base_type::size_type size_type;
 		typedef Hash hasher;
 
 		// Constructors/Destructor
 		/*
 		 * INPUT:
-		 * size_type max = -1 - maximum initial size
+		 * size_t max = -1 - maximum initial size
 		 * PRECONDITION:
 		 * max > 0
 		 * BEHAVIOR:
 		 * Generates an empty heap_cache with specified max size.
 		 */
-		heap_cache(size_type max = -1):
+		heap_cache(size_t max = -1):
 			 keymap(), heap(), max_size(max) {heap.push_back(nullptr);}
 		/*
 		 * INPUT:
@@ -115,26 +114,125 @@ namespace lfu
 		// Methods
 		/*
 		 * INPUT:
-		 * const heap_cache& other -
+		 * const heap_cache& other - heap cache to copy from
 		 * PRECONDITION:
 		 * BEHAVIOR:
+		 * Deep copy of other is made, each key-value pair and associated
+		 * lookup count is copied over
 		 * RETURN:
 		 * Reference to this.
 		 */
 		heap_cache& operator=(const heap_cache& other);
+		/*
+		 * INPUT:
+		 * heap_cache&& other - heap cache to move from
+		 * PRECONDITION:
+		 * this != &other
+		 * BEHAVIOR:
+		 * Clears current members and moves over information from other
+		 * to this. Other is put into an invalid state.
+		 * RETURN:
+		 * Reference to this.
+		 */
 		heap_cache& operator=(heap_cache&& other);
+		/*
+		 * INPUT:
+		 * PRECONDITION:
+		 * BEHAVIOR:
+		 * RETURN:
+		 * Whether the cache is empty
+		 */
 		virtual bool empty() const;
-		virtual size_type size() const; // not max size, current size
-		// Returns true if value added without any removals
-		// returns false if lfu kicked out if no room or if
-		// item replaced for having the same key.
+		/*
+		 * INPUT:
+		 * PRECONDITION:
+		 * BEHAVIOR:
+		 * RETURN:
+		 * Current (not maximum) size of cache
+		 */
+		virtual size_t size() const;
+		/*
+		 * INPUT:
+		 * PRECONDITION:
+		 * BEHAVIOR:
+		 * RETURN:
+		 * Maximum size of cache
+		 */
+		virtual size_t get_max_size() const;
+		/*
+		 * INPUT:
+		 * const kv_type& kv - key-value pair
+		 * PRECONDITION:
+		 * BEHAVIOR:
+		 * Inserts (key, value) into hash. May remove older, less frequently used
+		 * members from cache. If another object is present with the same key,
+		 * it is replaced.
+		 * RETURN:
+		 * True if an object of the same key is present (replacement occurred), or
+		 * false otherwise.
+		 */
 		virtual bool insert(const kv_type& kv);
+		/*
+		 * INPUT:
+		 * kv_type&& kv - key-value pair
+		 * PRECONDITION:
+		 * BEHAVIOR:
+		 * Inserts (key, value) into hash. May remove older, less frequently used
+		 * members from cache. If another object is present with the same key,
+		 * it is replaced.
+		 * RETURN:
+		 * False if an object of the same key is present (replacement occurred), or
+		 * true otherwise.
+		 */
 		virtual bool insert(kv_type&& kv);
+		/*
+		 * INPUT:
+		 * const key_type& key - key to look up
+		 * PRECONDITION:
+		 * BEHAVIOR:
+		 * RETURN:
+		 * Whether cache contains a certain key
+		 */
 		virtual bool contains(const key_type& key) const;
+		/*
+		 * INPUT:
+		 * const key_type& key
+		 * PRECONDITION:
+		 * BEHAVIOR:
+		 * Increases the lookup count for the key and changes associated
+		 * internal structure to prioritize retention of the key.
+		 * RETURN:
+		 * Pointer to associated value for key or nullptr if key is not
+		 * mapped to a value currently in the cache.
+		 */
 		virtual value_type *lookup(const key_type& key) const;
+		/*
+		 * INPUT:
+		 * PRECONDITION:
+		 * BEHAVIOR:
+		 * Clears cache completely, removing all items and setting size to
+		 * 0. Maximum size is kept the same.
+		 * RETURN:
+		 */
 		virtual void clear();
-		void set_max_size(size_type size);
-		hasher hash_function() const {return hashf;}
+		/*
+		 * INPUT:
+		 * size_t size - new max size
+		 * PRECONDITION:
+		 * size > 0
+		 * BEHAVIOR:
+		 * Sets maximum size. May result in deallocations and deletions if
+		 * new max size is smaller than current size.
+		 */
+		void set_max_size(size_t size);
+		/*
+		 * INPUT:
+		 * PRECONDITION:
+		 * BEHAVIOR:
+		 * RETURN:
+		 * Hashing function
+		 */
+		static hasher hash_function() {return hashf;}
 	};
 
 	// TODO local_heap_cache (identical to heap_cache, but uses vector

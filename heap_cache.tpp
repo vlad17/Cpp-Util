@@ -1,6 +1,6 @@
 /*
 * Vladimir Feinberg
-* 2013-12-01
+* 2013-12-02
 * heap_cache.tpp
 *
 * Contains implementation of lfu_cache.h's heap_cache methods.
@@ -10,6 +10,12 @@ template<typename K, typename V, typename P, typename H>
 lfu::heap_cache<K,V,P,H>::~heap_cache()
 {	
 	for(auto i : heap) delete i;
+}
+
+template<typename K, typename V, typename P, typename H>
+size_t lfu::heap_cache<K,V,P,H>::get_max_size() const
+{
+	return max_size;
 }
 
 template<typename K, typename V, typename P, typename H>
@@ -48,7 +54,7 @@ bool lfu::heap_cache<K,V,P,H>::empty() const
 }
 
 template<typename K, typename V, typename P, typename H>
-auto lfu::heap_cache<K,V,P,H>::size() const -> size_type
+auto lfu::heap_cache<K,V,P,H>::size() const -> size_t
 {
 	return keymap.size();
 }
@@ -59,25 +65,20 @@ bool lfu::heap_cache<K,V,P,H>::insert(const kv_type& kv)
 	_consistency_check();
 	if(max_size == 0) return false;
 	citem *valp = new citem(kv, heap.size());
-	citem *& mapped = keymap[valp->key];
-	if(mapped == nullptr)
+	citem *mapped = keymap[valp->key];
+	if(mapped != nullptr)
 	{
-		bool retval = true;
-		if(keymap.size() == max_size)
-		{
-			_del_back_full();
-			valp->loc = heap.size();
-			retval = false;
-		}
-		keymap[valp->key] = valp;
-		heap.push_back(valp);
-		return retval;
+		delete valp;
+		return false;
 	}
-	heap[mapped->loc] = valp;
-	valp->loc = mapped->loc;
-	delete mapped;
-	mapped = valp;
-	return false;
+	if(keymap.size() == max_size)
+	{
+		_del_back_full();
+		valp->loc = heap.size();
+	}
+	keymap[valp->key] = valp;
+	heap.push_back(valp);
+	return true;
 }
 
 template<typename K, typename V, typename P, typename H>
@@ -86,25 +87,20 @@ bool lfu::heap_cache<K,V,P,H>::insert(kv_type&& kv)
 	_consistency_check();
 	if(max_size == 0) return false;
 	citem *valp = new citem(std::forward<kv_type>(kv), heap.size());
-	citem *&mapped = keymap[valp->key];
-	if(mapped == nullptr)
+	citem *mapped = keymap[valp->key];
+	if(mapped != nullptr)
 	{
-		bool retval = true;
-		if(keymap.size() == max_size)
-		{
-			_del_back_full();
-			valp->loc = heap.size();
-			retval = false;
-		}
-		keymap[valp->key] = valp;
-		heap.push_back(valp);
-		return retval;
+		delete valp;
+		return false;
 	}
-	heap[mapped->loc] = valp;
-	valp->loc = mapped->loc;
-	delete mapped;
-	mapped = valp;
-	return false;
+	if(keymap.size() == max_size)
+	{
+		_del_back_full();
+		valp->loc = heap.size();
+	}
+	keymap[valp->key] = valp;
+	heap.push_back(valp);
+	return true;
 }
 
 template<typename K, typename V, typename P, typename H>
@@ -135,7 +131,7 @@ void lfu::heap_cache<K,V,P,H>::clear()
 }
 
 template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::set_max_size(size_type max)
+void lfu::heap_cache<K,V,P,H>::set_max_size(size_t max)
 {
 	_consistency_check();
 	max_size = max;
@@ -161,7 +157,7 @@ void lfu::heap_cache<K,V,P,H>::_del_back_full()
 	// below 4 it's not worth it
 	if(max_size <= 4) _del_back();
 	else
-		for(size_type i = max_size>>1; i < max_size; ++i)
+		for(size_t i = max_size>>1; i < max_size; ++i)
 			_del_back();
 }
 
@@ -194,7 +190,7 @@ void lfu::heap_cache<K,V,P,H>::_consistency_check() const
 	assert(keymap.size() + 1 == heap.size());
 	assert(heap[0] == nullptr);
 #ifdef HCACHE_CHECK
-	for(size_type i = keymap.size(); i > 1; --i)
+	for(size_t i = keymap.size(); i > 1; --i)
 	{
 		assert(heap[i] != nullptr);
 		assert(heap[i/2] != nullptr);
@@ -209,9 +205,9 @@ void lfu::heap_cache<K,V,P,H>::_print_cache(std::ostream& o) const
 	_consistency_check();
 	base_type::_print_cache(o);
 	if(empty()) return;
-	for(size_type i = 0; i < (size_type) (log(keymap.size()-1)/log(2))+1; ++i)
+	for(size_t i = 0; i < (size_t) (log(keymap.size()-1)/log(2))+1; ++i)
 	{
-		for(size_type j = pow(2, i); j <= pow(2, i+1)-1; ++j)
+		for(size_t j = pow(2, i); j <= pow(2, i+1)-1; ++j)
 		{
 			if(j > keymap.size()) break;
 			o << '(' << heap[j]->key << "->" << heap[j]->val << ',';
