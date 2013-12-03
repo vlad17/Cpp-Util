@@ -1,7 +1,7 @@
 /*
  * Vladimir Feinberg
  * main.cpp
- * 2013-11-24
+ * 2013-12-02
  *
  * Contains some tests for the data structures, prints to stdout.
  */
@@ -15,11 +15,13 @@
 
 using namespace std;
 
+int constexpr SEED = 0;
+
 void cache_test(), fibheap_test();
 
 int main()
 {
-	cache_test();
+	fibheap_test();
 	return 0;
 }
 
@@ -56,7 +58,7 @@ void cache_test()
 		lhc.insert(make_pair(i,i));
 	cout << lhc << endl;
 	cout << "Lookup 500 times, randomly." << endl;
-	minstd_rand0 gen(0);
+	minstd_rand0 gen(SEED);
 	for(int i = 0; i < 500; ++i)
 		lhc.lookup(gen()&127);
 	cout << lhc << endl;
@@ -84,10 +86,7 @@ void cache_test()
 	cout << "stress tests...." << endl;
 	lhc2.clear();
 #ifdef NDEBUG
-	int constexpr STRESS_REPS = 10000000;
-#else
-	int constexpr STRESS_REPS = 100000;
-#endif
+	int constexpr STRESS_REPS = 1e7;
 	int constexpr MAX_KEYSIZE = STRESS_REPS/100;
 	for(int i = 0; i < STRESS_REPS; ++i)
 	{
@@ -97,8 +96,8 @@ void cache_test()
 				cout << "\tError: value " << test << " not matched with key" << endl;
 		lhc2.insert(make_pair(test,test));
 	}
-	lhc2.lookup(0);
 	cout << "...Completed" << endl;
+#endif /* NDEBUG */
 }
 
 void fibheap_test()
@@ -191,4 +190,37 @@ void fibheap_test()
 	cout << moved << endl;
 	cout << "heap value after move:" << endl;
 	cout << f << endl;
+#ifdef NDEBUG
+	cout << "Stress test for fibheap..." << endl;
+	int constexpr STRESS_REPS = 1e7;
+	int constexpr MAX_KEYS = STRESS_REPS/100;
+	// will not have all keys, just some for tests
+	array<fibheap<int>::key_type, MAX_KEYS> keyarr;
+	minstd_rand0 gen(0);
+	for(int i = 0; i < STRESS_REPS; ++i)
+		if(gen()&1)
+			if(i < MAX_KEYS)
+				keyarr[i] = moved.push(i);
+			else
+			{
+				int rand = static_cast<int>(gen());
+				rand = rand >= 0 && rand < MAX_KEYS? rand+MAX_KEYS : rand;
+				moved.push(rand);
+			}
+		else
+		{
+			if(moved.top() < MAX_KEYS)
+			{
+				fibheap<int>::key_type k = keyarr[moved.top()];
+				if(k != moved.pop());
+					cout << "\tError: popped key does not match saved key" << endl;
+			}
+			moved.pop();
+		}
+	for(auto i : keyarr)
+		if(i != nullptr) moved.decrease_key(i, 0);
+	while(!moved.empty())
+		moved.pop();
+	cout << "...completed";
+#endif /* NDEBUG */
 }

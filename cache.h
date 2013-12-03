@@ -1,19 +1,13 @@
 /*
 * Vladimir Feinberg
 * cache.h
-* 2013-11-24
+* 2013-12-02
 *
 * Declares generic abstract cache class and its methods.
 */
 
 #ifndef CACHE_H_
 #define CACHE_H_
-
-#ifndef NDEBUG
-#define HCACHE_CHECK 1
-#endif
-
-// TODO document what everything should do
 
 template<typename Key, typename Value, typename Pred = std::equal_to<Key> >
 class cache

@@ -1,7 +1,7 @@
 /*
 * Vladimir Feinberg
 * fibheap.h
-* 2013-11-03
+* 2013-12-02
 *
 * Declares all methods that a decrease-key priority queue must have,
 * implements it as a Fibonacci heap. Fibonacci heaps have similar
@@ -29,6 +29,7 @@
 
 // TODO print fibheap bfs -> print newlines by putting them into
 // the queue, instead of doing a check.
+// TODO decrease-key to take in std::function(void(value_type&)).
 
 // TODO document header
 // TODO efficient inputiterator?

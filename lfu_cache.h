@@ -235,9 +235,6 @@ namespace lfu
 		static hasher hash_function() {return hashf;}
 	};
 
-	// TODO local_heap_cache (identical to heap_cache, but uses vector
-	// to store the citems)
-
 	// TODO exact_heap_cache (min ordered at top, always removes exactly
 	// LFU)
 
