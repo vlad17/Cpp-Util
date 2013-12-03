@@ -30,6 +30,7 @@
 // TODO print fibheap bfs -> print newlines by putting them into
 // the queue, instead of doing a check.
 // TODO decrease-key to take in std::function(void(value_type&)).
+// TODO document
 
 // TODO document header
 // TODO efficient inputiterator?
