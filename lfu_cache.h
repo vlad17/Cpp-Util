@@ -101,6 +101,7 @@ namespace lfu
 		 * heap_cache&& other - heap cache to move from
 		 * BEHAVIOR:
 		 * Moves (deletes and shallow-copies) other.
+		 * Not noexcept. See move assignment.
 		 */
 		heap_cache(heap_cache&& other) :
 			heap_cache(1) {*this = std::forward(other);}
@@ -118,7 +119,7 @@ namespace lfu
 		 * PRECONDITION:
 		 * BEHAVIOR:
 		 * Deep copy of other is made, each key-value pair and associated
-		 * lookup count is copied over
+		 * lookup count is copied over.
 		 * RETURN:
 		 * Reference to this.
 		 */
@@ -131,6 +132,8 @@ namespace lfu
 		 * BEHAVIOR:
 		 * Clears current members and moves over information from other
 		 * to this. Other is put into an invalid state.
+		 * Not noexcept because the class contains a member which has only
+		 * a basic guarantee for exceptions (vector).
 		 * RETURN:
 		 * Reference to this.
 		 */
