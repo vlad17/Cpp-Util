@@ -21,7 +21,7 @@ void cache_test(), fibheap_test();
 
 int main()
 {
-	fibheap_test();
+	cache_test();
 	return 0;
 }
 
@@ -83,9 +83,9 @@ void cache_test()
 	lhc2 = move(lhc);
 	cout << lhc2 << endl;
 	cout << "after move (from assignment value) - size: " << lhc.size() << endl;
-	cout << "stress tests...." << endl;
 	lhc2.clear();
 #ifdef NDEBUG
+	cout << "stress tests for heap cache...." << endl;
 	int constexpr STRESS_REPS = 1e7;
 	int constexpr MAX_KEYSIZE = STRESS_REPS/100;
 	for(int i = 0; i < STRESS_REPS; ++i)

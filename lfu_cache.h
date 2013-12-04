@@ -44,6 +44,8 @@ namespace lfu
 	class heap_cache : public cache<Key, Value, Pred>
 	{
 	private:
+		// REFRESH_RATIO is ratio of cache that remains on lookup-triggered refresh.
+		static constexpr double REFRESH_RATIO = 0.5;
 		struct citem
 		{
 			typedef typename cache<Key, Value, Pred>::kv_type kv_type;

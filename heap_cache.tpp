@@ -157,7 +157,8 @@ void lfu::heap_cache<K,V,P,H>::_del_back_full()
 	// below 4 it's not worth it
 	if(max_size <= 4) _del_back();
 	else
-		for(size_t i = max_size>>1; i < max_size; ++i)
+		for(size_t i = static_cast<size_t>(max_size*REFRESH_RATIO);
+			i < max_size; ++i)
 			_del_back();
 }
 
