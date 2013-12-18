@@ -1,7 +1,7 @@
 /*
 * Vladimir Feinberg
 * lfu_cache.h
-* 2013-12-02
+* 2013-12-18
 *
 * Defines heap_cache, exact_heap_cache, and linked_cache classes,
 * which are implementations of the abstract cache class that eliminate
@@ -96,8 +96,6 @@ namespace lfu
 		/*
 		 * INPUT:
 		 * size_t max = -1 - maximum initial size
-		 * PRECONDITION:
-		 * max > 0
 		 * BEHAVIOR:
 		 * Generates an empty heap_cache with specified max size.
 		 */

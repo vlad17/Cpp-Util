@@ -118,6 +118,16 @@ public:
 	friend std::ostream& operator<<(std::ostream&, const cache<K,V,P>&);
 };
 
+/*
+ * INPUT:
+ * std::ostream& o - ostream to print to
+ * const cache<K,V,P>& cache - cache to print
+ * PRECONDITION:
+ * BEHAVIOR:
+ * Prints cache to stream
+ * RETURN:
+ * Original ostream
+ */
 template<typename K, typename V, typename P>
 std::ostream& operator<<(std::ostream& o, const cache<K,V,P>& cache)
 {

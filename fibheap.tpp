@@ -1,6 +1,6 @@
 /*
 * Vladimir Feinberg
-* 2013-10-03
+* 2013-12-18
 * fibheap.tpp
 *
 * Contains implementation of fibheap.h methods.
@@ -127,7 +127,7 @@ typename fibheap<T,C>::key_type fibheap<T,C>::push(const value_type& p)
 
 template<typename T, typename C>
 template<typename... Args>
-void fibheap<T,C>::emplace(Args&&... args)
+key_type fibheap<T,C>::emplace(Args&&... args)
 {
 	_consistency_check();
 	node *added = new node(std::forward<Args>(args)...);
