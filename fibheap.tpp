@@ -81,9 +81,38 @@ void fibheap<T,C>::_print_fibheap(std::ostream& o) const
 		bfsqueue.push(n);
 		n = n->right;
 	} while(n != min);
-	size_t depth = print_node(o, bfsqueue, 0);
-	while(depth != (size_t) -1) depth = print_node(o, bfsqueue, depth);
-	o << std::endl;
+	
+	bfsqueue.push(nullptr); // signify newlines with nullptr
+	
+	while(!bfsqueue.empty())
+	{
+		n = bfsqueue.front();
+		if(n == nullptr)
+		{
+			o << '\n';
+			if(bfsqueue.size() > 1)
+				bfsqueue.push(nullptr);
+		}
+		else
+		{
+			o << n->val << '(';
+			if(n->up == nullptr) o << '-';
+			else o << n->up->val;
+			o << ')' << ' ';
+			if(n->down != nullptr)
+			{
+				const node *child = n->down;
+				do
+				{
+					bfsqueue.push(child);
+					child = child->right;
+				} while(child != n->down);
+			}
+		}
+		bfsqueue.pop();
+	}
+	
+	o << '\n';
 }
 
 template<typename T, typename C>
@@ -100,10 +129,6 @@ size_t fibheap<T,C>::print_node(std::ostream& o,
 	}
 	if(newdepth != depth)
 		o << '\n';
-	o << q.front()->val << '(';
-	if(q.front()->up == nullptr) o << '-';
-	else o << q.front()->up->val;
-	o << ')' << ' ';
 	n = q.front()->down;
 	if(n != nullptr)
 		do
