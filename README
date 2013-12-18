@@ -7,8 +7,8 @@ know and then I'll get to documenting the code and making what needs to be done
 clear.
 
 TODO:
-	Lightly document heap_cache internals
 	fibheap (check file for TODOs)
+	fixed_allocator
 	different lfu cache implementations (see file)
 	valgrind check
 	
