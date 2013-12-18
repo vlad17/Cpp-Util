@@ -21,7 +21,7 @@ void cache_test(), fibheap_test();
 
 int main()
 {
-	cache_test();
+	fibheap_test();
 	return 0;
 }
 

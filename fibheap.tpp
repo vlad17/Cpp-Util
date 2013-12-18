@@ -116,32 +116,6 @@ void fibheap<T,C>::_print_fibheap(std::ostream& o) const
 }
 
 template<typename T, typename C>
-size_t fibheap<T,C>::print_node(std::ostream& o,
-		std::queue<const node*>& q, size_t depth)
-{
-	if(q.empty()) return -1;
-	size_t newdepth = 0;
-	const node *n = q.front();
-	while(n->up != nullptr)
-	{
-		n = n->up;
-		++newdepth;
-	}
-	if(newdepth != depth)
-		o << '\n';
-	n = q.front()->down;
-	if(n != nullptr)
-		do
-		{
-			q.push(n);
-			n = n->right;
-		} while(n != q.front()->down);
-	n = q.front();
-	q.pop();
-	return newdepth;
-}
-
-template<typename T, typename C>
 typename fibheap<T,C>::key_type fibheap<T,C>::push(const value_type& p)
 {
 	_consistency_check();
@@ -169,6 +143,7 @@ void fibheap<T,C>::decrease_key(key_type key, const value_type& val)
 	assert(key != nullptr);
 	_consistency_check();
 	node* changed = static_cast<node*>(const_cast<void*>(key));
+	assert(comp(val, changed->val));
 	changed->val = val;
 	changed->marked = false;
 	if(changed->up != nullptr)

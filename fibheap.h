@@ -13,6 +13,8 @@
 #ifndef FIBHEAP_H_
 #define FIBHEAP_H_
 
+// Define fib check if invariant checking in debug mode should be thorough.
+// Thorough check traverses entire data structure.
 #ifndef NDEBUG
 #define FIB_CHECK 1
 #endif
@@ -27,14 +29,12 @@
 #include <unordered_set>
 #endif
 
-// TODO print fibheap bfs -> print newlines by putting them into
-// the queue, instead of doing a check.
-// TODO decrease-key to take in std::function(void(value_type&)).
 // TODO document
 
-// TODO document header
 // TODO efficient inputiterator?
-// TODO merge (v1)
+// TODO decrease-key to take in std::function(void(value_type&))
+// TODO decrease-key copy old value and check? ifdef ...?
+// TODO merge
 // TODO iterator, ordered_iterator (in vector key table version v2)
 // TODO copying (v2)
 
@@ -99,8 +99,6 @@ private:
 
 	static constexpr const double PHI = 1+sqrt((double) 5)/2;
 	static constexpr size_t approx_childnum(size_t size);
-	static size_t print_node(std::ostream& o, std::queue<const node*>& q,
-			size_t depth);
 public:
 	// Types
 	typedef Compare comparator_type;
@@ -131,7 +129,7 @@ public:
 	void emplace(Args&&... args);
 	// key needs to be vaild, remains valid.
 	void decrease_key(key_type k, const value_type& v);
-	void decrease_key(key_type k, value_type&& v);
+	void decrease_key(key_type k, value_type&& v); // NOT CHECKED FOR BEING SMALLER
 	// Invalidates all keys
 	void clear();
 	// Returns invalidated key
