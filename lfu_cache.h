@@ -46,6 +46,9 @@ namespace lfu
 	private:
 		// REFRESH_RATIO is ratio of cache that remains on lookup-triggered refresh.
 		static constexpr double REFRESH_RATIO = 0.5;
+		// An item is a key-value pair, location in heap, and count
+		// Maintining all the information in one place allows two-way
+		// access between the heap and lookup map.
 		struct citem
 		{
 			typedef typename cache<Key, Value, Pred>::kv_type kv_type;
@@ -61,15 +64,25 @@ namespace lfu
 			const kv_type& kvpair() const
 			{return *reinterpret_cast<const kv_type*>(&key);}
 		};
+		// Maintains mapping from key to citem
 		mutable std::unordered_map<Key, citem*, Hash, Pred> keymap;
+		// Heap keeps a priority-queue like structure
 		mutable std::vector<citem*> heap;
+		// Hash function
 		static Hash hashf;
-		void _del_back();
-		void _del_back_full();
-		void increase_key(citem *c) const;
-		void _consistency_check() const;
-		void _print_cache(std::ostream& o) const;
+		// Maximum size of cache.
 		size_t max_size;
+		// Pop back item from heap. Most likely to be recent, and infrequently
+		// used.
+		void _del_back();
+		// Pop REFRESH_RATIO citems off
+		void _del_back_full();
+		// Increase citem to restore heap property
+		void increase_key(citem *c) const;
+		// Check invariants
+		void _consistency_check() const;
+		// Prints debug info
+		void _print_cache(std::ostream& o) const;
 	public:
 		// Public typedefs
 		typedef cache<Key, Value, Pred> base_type;
