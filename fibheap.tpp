@@ -127,7 +127,7 @@ typename fibheap<T,C>::key_type fibheap<T,C>::push(const value_type& p)
 
 template<typename T, typename C>
 template<typename... Args>
-key_type fibheap<T,C>::emplace(Args&&... args)
+auto fibheap<T,C>::emplace(Args&&... args) -> key_type
 {
 	_consistency_check();
 	node *added = new node(std::forward<Args>(args)...);

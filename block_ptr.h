@@ -13,6 +13,8 @@
 #include <queue>
 #include <vector>
 
+// TODO add locks
+
 // Type must be movable
 template<typename T>
 class block_ptr
@@ -29,9 +31,13 @@ private:
 	public:
 		fixed_allocator() :
 			store(4096/sizeof(T)), freelist() {};
+		// data races: no dereferencing allowed during construction
 		template<typename... Args>
 		index_type construct(Args&& args...);
 		void destruct(index_type i);
+		// data races: no dereferencing allowed during construction
+		T& operator[](index_type i);
+		const T& operator[](index_type i) const;
 	};
 	static fixed_allocator allocator {};
 	index_type index;
@@ -39,10 +45,52 @@ public:
 	template<typename... Args>
 	block_ptr(Args&& args...) :
 		index(allocator.construct(std::forward(args))) {}
+	// refrences, pointers only valid during call
+	T& operator*() { return allocator[index];}
+	const T& operator*() const { return allocator[index];}
+	T *operator->() {return &**this;}
+	const T *operator->() const {return &**this;}
 	~block_ptr()
 	{
 		allocator.destruct(index);
 	}
 };
+
+// data races: no dereferencing allowed during construction
+// may invalidate pointers, not indices.
+template<typename T>
+template<typename... Args>
+auto block_ptr<T>::fixed_allocator::construct(Args&& args...) -> index_type
+{
+	index_type i;
+	if(freelist.empty())
+	{
+		i = store.size();
+		store.emplace_back(args);
+		return i;
+	}
+	i = freelist.front();
+	store[i] = T(args);
+	freelist.pop();
+	return i;
+}
+
+template<typename T>
+void block_ptr<T>::fixed_allocator::destruct(index_type i)
+{
+	freelist.push(i);
+}
+
+// data races: no dereferencing allowed during construction
+template<typename T>
+T& block_ptr<T>::fixed_allocator::operator[](index_type i)
+{
+	return store[i];
+}
+template<typename T>
+const T& block_ptr<T>::fixed_allocator::operator[](index_type i) const
+{
+	return store[i];
+}
 
 #endif /* BLOCK_PTR_H_ */
