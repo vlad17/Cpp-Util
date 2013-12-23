@@ -37,6 +37,9 @@ void bptr_test()
 	ptr->first--;
 	ptr->second++;
 	cout << "\t(" << (*ptr).first << "," << (*ptr).second << ")" << endl;
+	cout << "Change ownership\n";
+	auto ptrcpy = move(ptr);
+	cout << "\tnew: (" << ptrcpy->first << "," << ptrcpy->second << ")" << endl;
 	cout << "Block list test\n";
 }
 

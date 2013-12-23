@@ -12,10 +12,13 @@
 
 #include <queue>
 #include <vector>
+#include <cassert>
+
+
+// TODO make fixed_allocator conform to specification of normal allocator
 
 // TODO add parallel_fixed_allocator
 // (uses R/W lock, writing for construction if need to reallocate, read otherwise).
-// TODO make more like normal allocator
 
 namespace mempool
 {
@@ -46,7 +49,7 @@ namespace mempool
 
 	/**
 	 * block_ptr maintains a contiguous memory chunk referenced by
-	 * fixed_allocator
+	 * fixed_allocator. In terms of ownership, it is basically a unique pointer.
 	 */
 	template<typename T,
 			fixed_allocator<T>& allocator = fixed_allocator<T>::DEFAULT>
@@ -55,24 +58,36 @@ namespace mempool
 	private:
 		typedef index_t index_type;
 		index_type index;
+		const index_type NULLVAL = -1;
 	public:
 		template<typename... Args>
 		block_ptr(Args&&... args) :
 			index(allocator.construct(std::forward<Args>(args)...)) {}
+		block_ptr(const block_ptr&) = delete;
+		block_ptr(block_ptr&& bp) :
+			index(std::move(bp.index))
+		{
+			bp.index = NULLVAL;
+		}
 		// refrences, pointers only valid during call
-		T& operator*() { return allocator[index];}
-		const T& operator*() const { return allocator[index];}
-		T *operator->() {return &**this;}
-		const T *operator->() const {return &**this;}
+		T& operator*()
+		{ assert(index != NULLVAL); return allocator[index];}
+		const T& operator*() const
+		{ assert(index != NULLVAL); return allocator[index];}
+		T *operator->()
+		{ assert(index != NULLVAL); return &**this;}
+		const T *operator->() const
+		{ assert(index != NULLVAL); return &**this;}
 		~block_ptr()
 		{
-			allocator.destruct(index);
+			if(index != NULLVAL)
+				allocator.destruct(index);
 		}
 	};
 }
 
 // data races: no dereferencing allowed during construction
-// may invalidate pointers, not indices.
+// may invalidate parameterpointers, not indices.
 template<typename T>
 template<typename... Args>
 auto mempool::fixed_allocator<T>::construct(Args&&... args) -> index_type
