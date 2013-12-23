@@ -10,6 +10,7 @@
 
 #include "fibheap.h"
 #include "lfu_cache.h"
+#include "block_ptr.h"
 #include <random>
 #include <array>
 
@@ -17,12 +18,26 @@ using namespace std;
 
 int constexpr SEED = 0;
 
-void cache_test(), fibheap_test();
+void cache_test(), fibheap_test(), bptr_test();
 
 int main()
 {
-	fibheap_test();
+	bptr_test();
 	return 0;
+}
+
+void bptr_test()
+{
+	cout << "Block pointer test\n";
+	mempool::block_ptr<pair<int, int> > ptr(0,1);
+	cout << "Pair (0,1): " << endl;
+	cout << "\tfirst:  " << ptr->first << '\n';
+	cout << "\tsecond: " << ptr->second << '\n';
+	cout << "Change to (-1, 2)\n";
+	ptr->first--;
+	ptr->second++;
+	cout << "\t(" << (*ptr).first << "," << (*ptr).second << ")" << endl;
+	cout << "Block list test\n";
 }
 
 void cache_test()

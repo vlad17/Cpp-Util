@@ -13,82 +13,100 @@
 #include <queue>
 #include <vector>
 
-// TODO add locks
+// TODO add parallel_fixed_allocator
+// (uses R/W lock, writing for construction if need to reallocate, read otherwise).
+// TODO make more like normal allocator
 
-// Type must be movable
-template<typename T>
-class block_ptr
+namespace mempool
 {
-private:
-	typedef unsigned index_type;
+	// Indexing type (may be set larger if more objects expected).
+	typedef unsigned index_t;
+
 	// fixed_allocator for each type T
+	template<typename T>
 	class fixed_allocator
 	{
 	private:
-		typedef block_ptr<T>::index_type index_type;
+		typedef index_t index_type;
 		std::vector<T> store;
 		std::queue<index_type> freelist;
+		static const size_t DEF_PAGE = 4096;
 	public:
+		static fixed_allocator<T> DEFAULT;
 		fixed_allocator() :
-			store(4096/sizeof(T)), freelist() {};
+			store(DEF_PAGE/sizeof(T)), freelist() {};
 		// data races: no dereferencing allowed during construction
 		template<typename... Args>
-		index_type construct(Args&& args...);
+		index_type construct(Args&&... args);
 		void destruct(index_type i);
 		// data races: no dereferencing allowed during construction
 		T& operator[](index_type i);
 		const T& operator[](index_type i) const;
 	};
-	static fixed_allocator allocator {};
-	index_type index;
-public:
-	template<typename... Args>
-	block_ptr(Args&& args...) :
-		index(allocator.construct(std::forward(args))) {}
-	// refrences, pointers only valid during call
-	T& operator*() { return allocator[index];}
-	const T& operator*() const { return allocator[index];}
-	T *operator->() {return &**this;}
-	const T *operator->() const {return &**this;}
-	~block_ptr()
+
+	/**
+	 * block_ptr maintains a contiguous memory chunk referenced by
+	 * fixed_allocator
+	 */
+	template<typename T,
+			fixed_allocator<T>& allocator = fixed_allocator<T>::DEFAULT>
+	class block_ptr
 	{
-		allocator.destruct(index);
-	}
-};
+	private:
+		typedef index_t index_type;
+		index_type index;
+	public:
+		template<typename... Args>
+		block_ptr(Args&&... args) :
+			index(allocator.construct(std::forward<Args>(args)...)) {}
+		// refrences, pointers only valid during call
+		T& operator*() { return allocator[index];}
+		const T& operator*() const { return allocator[index];}
+		T *operator->() {return &**this;}
+		const T *operator->() const {return &**this;}
+		~block_ptr()
+		{
+			allocator.destruct(index);
+		}
+	};
+}
 
 // data races: no dereferencing allowed during construction
 // may invalidate pointers, not indices.
 template<typename T>
 template<typename... Args>
-auto block_ptr<T>::fixed_allocator::construct(Args&& args...) -> index_type
+auto mempool::fixed_allocator<T>::construct(Args&&... args) -> index_type
 {
 	index_type i;
 	if(freelist.empty())
 	{
 		i = store.size();
-		store.emplace_back(args);
+		store.emplace_back(std::forward<Args>(args)...);
 		return i;
 	}
 	i = freelist.front();
-	store[i] = T(args);
+	store[i] = T(std::forward<Args>(args)...);
 	freelist.pop();
 	return i;
 }
 
 template<typename T>
-void block_ptr<T>::fixed_allocator::destruct(index_type i)
+mempool::fixed_allocator<T> mempool::fixed_allocator<T>::DEFAULT {};
+
+template<typename T>
+void mempool::fixed_allocator<T>::destruct(index_type i)
 {
 	freelist.push(i);
 }
 
 // data races: no dereferencing allowed during construction
 template<typename T>
-T& block_ptr<T>::fixed_allocator::operator[](index_type i)
+T& mempool::fixed_allocator<T>::operator[](index_type i)
 {
 	return store[i];
 }
 template<typename T>
-const T& block_ptr<T>::fixed_allocator::operator[](index_type i) const
+const T& mempool::fixed_allocator<T>::operator[](index_type i) const
 {
 	return store[i];
 }
