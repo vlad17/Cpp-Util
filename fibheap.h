@@ -17,6 +17,8 @@
 // Thorough check traverses entire data structure.
 #ifndef NDEBUG
 #define FIB_CHECK 1
+#else
+#define FIB_CHECK 0
 #endif
 
 #include <list>

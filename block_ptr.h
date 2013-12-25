@@ -12,6 +12,12 @@
 #ifndef BLOCK_PTR_H_
 #define BLOCK_PTR_H_
 
+#ifndef NDEBUG
+#define BPTR_CHECK 1
+#else
+#define BPTR_CHECK 0
+#endif
+
 #include <queue>
 #include <vector>
 #include <cassert>
@@ -45,7 +51,6 @@ namespace mempool
 			static fixed_allocator DEFAULT;
 			fixed_allocator():
 				store(DEF_PAGE/sizeof(T)), freelist() {};
-			// TODO finish methods
 			template<typename... Args>
 			index_t construct(Args&&... args);
 			void destruct(index_t i);
@@ -60,10 +65,21 @@ namespace mempool
 		fixed_allocator& allocator; // TODO just use default	?
 		index_t index;
 		const index_t NULLVAL = -1;
-	private:
 		block_ptr(fixed_allocator& alloc, index_t index) :
 			allocator(alloc), index(index) {}
+		// template magic for easily copyable types (
+		template<bool B, class E>
+		struct easily_copyable { typedef const E& type; };
+		template<class E>
+		struct easily_copyable<true, E> { typedef E type; };
+		template<class E>
+		using cref = easily_copyable<std::is_integral<E>::value, E>;
 	public:
+		typedef T type;
+		typedef T& reference;
+		typedef typename cref<T>::type const_reference;
+		typedef T* pointer;
+		typedef const T* const_pointer;
 		typedef fixed_allocator basic_allocator;
 		//typedef parallel_fixed_allocator parallel_allocator;
 		template<typename... Args>
@@ -74,23 +90,45 @@ namespace mempool
 		//static block_ptr create_parallel(parallel_allocator& alloc, Args&&... args);
 		//template<typename... Args>
 		//static block_ptr create_parallel(parallel_allocator& alloc, Args&&... args);
-		basic_allocator generate_allocator();
+		static basic_allocator generate_allocator();
 		// parallel_allocator generate_parallel_allocator();
 		block_ptr(const block_ptr&) = delete;
 		block_ptr(block_ptr&& bp) :
 			allocator(bp.allocator), index(std::move(bp.index))
 		{ bp.index = NULLVAL;}
 		// refrences, pointers only valid during call
-		T& operator*() { assert(index != NULLVAL); return allocator[index];}
-		const T& operator*() const { assert(index != NULLVAL); return allocator[index];}
-		T *operator->() { assert(index != NULLVAL); return &**this;}
-		const T *operator->() const { assert(index != NULLVAL); return &**this;}
-		~block_ptr() { if(index != NULLVAL) allocator.destruct(index);}
+		bool valid() const;
+		reference operator*();
+		const_reference operator*() const;
+		pointer operator->();
+		const_pointer operator->() const;
+		~block_ptr();
 	};
 
 	// data races: no dereferencing allowed during vector expansion
 	// in construction.
 
+	// no ownership
+	template<typename T>
+	class weak_block_ptr
+	{
+	private:
+		block_ptr<T>& bptr;
+	public:
+		typedef typename block_ptr<T>::type type;
+		typedef typename block_ptr<T>::reference reference;
+		typedef typename block_ptr<T>::const_reference const_reference;
+		typedef typename block_ptr<T>::pointer pointer;
+		typedef typename block_ptr<T>::const_pointer const_pointer;
+		weak_block_ptr(block_ptr<T>& bptr) :
+			bptr(bptr) {}
+		weak_block_ptr(const weak_block_ptr& other) :
+			bptr(other.bptr) {}
+		reference operator*() {return *bptr;}
+		const_reference operator*() const {return *bptr;}
+		pointer operator->() {return bptr.operator->();}
+		const_pointer operator->() const {return bptr.operator->();}
+	};
 
 }
 
@@ -158,6 +196,47 @@ template<typename T>
 auto mempool::block_ptr<T>::generate_allocator() -> basic_allocator
 {
 	return basic_allocator();
+}
+
+template<typename T>
+bool mempool::block_ptr<T>::valid() const
+{
+	return index != NULLVAL;
+}
+
+template<typename T>
+auto mempool::block_ptr<T>::operator*() -> reference
+{
+	assert(valid());
+	return allocator[index];
+}
+
+template<typename T>
+auto mempool::block_ptr<T>::operator*() const -> const_reference
+{
+	assert(valid());
+	return allocator[index];
+}
+
+template<typename T>
+auto mempool::block_ptr<T>::operator->() -> pointer
+{
+	assert(valid());
+	return &**this;
+}
+
+template<typename T>
+auto mempool::block_ptr<T>::operator->() const -> const_pointer
+{
+	assert(valid());
+	return &**this;
+}
+
+template<typename T>
+mempool::block_ptr<T>::~block_ptr()
+{
+	if(valid())
+		allocator.destruct(index);
 }
 
 #endif /* BLOCK_PTR_H_ */

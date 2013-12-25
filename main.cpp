@@ -16,7 +16,7 @@
 
 using namespace std;
 
-int constexpr SEED = 0;
+const int SEED = 0;
 
 void cache_test(), fibheap_test(), bptr_test();
 
@@ -41,6 +41,11 @@ void bptr_test()
 	cout << "Change ownership\n";
 	auto ptrcpy = move(ptr);
 	cout << "\tnew: (" << ptrcpy->first << "," << ptrcpy->second << ")" << endl;
+	mempool::weak_block_ptr<pointer::type> wptr(ptrcpy);
+	cout << "Create weak copy" << endl;
+	cout << "\tstrong: (" << ptrcpy->first << "," << ptrcpy->second << ")" << endl;
+	cout << "\tcopy: (" << wptr->first << "," << wptr->second << ")" << endl;
+	cout << "cref: " << is_reference<pointer::const_reference>::value << endl;
 	cout << "Block list test\n";
 }
 
