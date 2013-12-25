@@ -29,7 +29,8 @@ int main()
 void bptr_test()
 {
 	cout << "Block pointer test\n";
-	mempool::block_ptr<pair<int, int> > ptr(0,1);
+	typedef mempool::block_ptr<pair<int, int> > pointer;
+	pointer ptr = pointer::create(0,1);
 	cout << "Pair (0,1): " << endl;
 	cout << "\tfirst:  " << ptr->first << '\n';
 	cout << "\tsecond: " << ptr->second << '\n';

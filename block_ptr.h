@@ -16,7 +16,7 @@
 #include <vector>
 #include <cassert>
 
-// TODO make fixed_allocator conform to specification of normal allocator
+// TODO consistency ifndef NDEBUG...
 
 // TODO add parallel_fixed_allocator
 // (uses R/W lock, writing for construction if need to reallocate, read otherwise).
@@ -42,37 +42,39 @@ namespace mempool
 			static const size_t DEF_PAGE = 4096;
 			std::vector<T> store;
 			std::queue<index_t> freelist;
-		public:
-			static fixed_allocator<T> DEFAULT;
+			static fixed_allocator DEFAULT;
 			fixed_allocator():
 				store(DEF_PAGE/sizeof(T)), freelist() {};
-			fixed_allocator(const fixed_allocator&) = delete;
-			fixed_allocator(fixed_allocator&&) noexcept = default;
 			// TODO finish methods
 			template<typename... Args>
 			index_t construct(Args&&... args);
 			void destruct(index_t i);
 			T& operator[](index_t i);
 			const T& operator[](index_t i) const;
+			friend class block_ptr<T>;
+		public:
+			fixed_allocator(const fixed_allocator&) = delete;
+			fixed_allocator(fixed_allocator&&) = default;
 		};
-		// TODO add parallel class here
-		fixed_allocator& allocator; // TODO just use default?
+		// TODO add parallel allocator class here
+		fixed_allocator& allocator; // TODO just use default	?
 		index_t index;
 		const index_t NULLVAL = -1;
+	private:
 		block_ptr(fixed_allocator& alloc, index_t index) :
 			allocator(alloc), index(index) {}
 	public:
 		typedef fixed_allocator basic_allocator;
 		//typedef parallel_fixed_allocator parallel_allocator;
 		template<typename... Args>
-		static block_ptr create(Args&&... args); // TODO implement default
+		static block_ptr create(Args&&... args);
 		template<typename... Args>
 		static block_ptr create(basic_allocator& alloc, Args&&... args);
-			// TODO implement
 		//template<typename... Args>
-		//static block_ptr bptr_create_parallel(parallel_allocator& alloc, Args&&... args);
+		//static block_ptr create_parallel(parallel_allocator& alloc, Args&&... args);
+		//template<typename... Args>
+		//static block_ptr create_parallel(parallel_allocator& alloc, Args&&... args);
 		basic_allocator generate_allocator();
-			// todo easy return basic allocator.
 		// parallel_allocator generate_parallel_allocator();
 		block_ptr(const block_ptr&) = delete;
 		block_ptr(block_ptr&& bp) :
@@ -92,7 +94,7 @@ namespace mempool
 
 }
 
-
+// TODO make explicit constructor/destructor calls via pointer.
 
 // data races: no dereferencing allowed during construction
 // may invalidate parameter pointers, not indices.
@@ -108,19 +110,20 @@ auto mempool::block_ptr<T>::fixed_allocator::construct(Args&&... args) -> index_
 		return i;
 	}
 	i = freelist.front();
-	store[i] = T(std::forward<Args>(args)...);
+	new (&store[i]) T(std::forward<Args>(args)...);
 	freelist.pop();
 	return i;
 }
 
 
 template<typename T>
-mempool::block_ptr<T>::fixed_allocator
-mempool::block_ptr<T>::fixed_allocator::fixed_allocator<T>::DEFAULT {};
+typename mempool::block_ptr<T>::fixed_allocator
+mempool::block_ptr<T>::fixed_allocator::fixed_allocator::DEFAULT {};
 
 template<typename T>
 void mempool::block_ptr<T>::fixed_allocator::destruct(index_t i)
 {
+	store[i].~T();
 	freelist.push(i);
 }
 
@@ -134,6 +137,27 @@ template<typename T>
 const T& mempool::block_ptr<T>::fixed_allocator::operator[](index_t i) const
 {
 	return store[i];
+}
+
+template<typename T>
+template<typename... Args>
+auto mempool::block_ptr<T>::create(Args&&... args) -> block_ptr<T>
+{
+	return create(fixed_allocator::DEFAULT, std::forward<Args>(args)...);
+}
+
+template<typename T>
+template<typename... Args>
+auto mempool::block_ptr<T>::create(basic_allocator& alloc,
+		Args&&... args) -> block_ptr<T>
+{
+	return block_ptr<T>(alloc, alloc.construct(std::forward<Args>(args)...));
+}
+
+template<typename T>
+auto mempool::block_ptr<T>::generate_allocator() -> basic_allocator
+{
+	return basic_allocator();
 }
 
 #endif /* BLOCK_PTR_H_ */
