@@ -53,7 +53,8 @@ namespace mempool
 		public:
 			template<typename... Args>
 			optional(Args&&... args) :
-				initialized(false) {construct(std::forward<Args>(args)...);}
+				initialized(false) {this->construct(std::forward<Args>(args)...);}
+			optional(optional&& other);
 			template<typename... Args>
 			void construct(Args&&... args);
 			void destruct();
@@ -152,11 +153,19 @@ namespace mempool
 }
 
 template<typename T>
+mempool::block_ptr<T>::optional::optional(optional&& other) :
+	initialized(other.initialized)
+{
+	if(initialized)
+		new (get()) T(std::move(*other.get()));
+}
+
+template<typename T>
 template<typename... Args>
 void mempool::block_ptr<T>::optional::construct(Args&&... args)
 {
 	assert(!initialized);
-	new (get()) optional(std::forward<Args>(args)...);
+	new (get()) T(std::forward<Args>(args)...);
 	initialized = true;
 }
 
