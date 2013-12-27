@@ -42,11 +42,30 @@ namespace mempool
 	class block_ptr
 	{
 	private:
+		// class inspired by boost::optional<T>, but is simpler
+		// and does not use factories, which copy arguments for construction.
+		// controls deletion/construction of an object.
+		class optional
+		{
+		private:
+			bool initialized;
+			char store[sizeof(T)];
+		public:
+			template<typename... Args>
+			optional(Args&&... args) :
+				initialized(false) {construct(std::forward<Args>(args)...);}
+			template<typename... Args>
+			void construct(Args&&... args);
+			void destruct();
+			T *get();
+			const T *get() const;
+			~optional();
+		};
 		class fixed_allocator
 		{
 		private:
-			static const size_t DEF_PAGE = 4096;
-			std::vector<T> store;
+			static const index_t DEF_PAGE = 4096;
+			std::vector<optional> store;
 			std::queue<index_t> freelist;
 			static fixed_allocator DEFAULT;
 			fixed_allocator():
@@ -132,6 +151,44 @@ namespace mempool
 
 }
 
+template<typename T>
+template<typename... Args>
+void mempool::block_ptr<T>::optional::construct(Args&&... args)
+{
+	assert(!initialized);
+	new (get()) optional(std::forward<Args>(args)...);
+	initialized = true;
+}
+
+template<typename T>
+void mempool::block_ptr<T>::optional::destruct()
+{
+	assert(initialized);
+	(*get()).~T();
+	initialized = false;
+}
+
+// need not be initialized
+template<typename T>
+T *mempool::block_ptr<T>::optional::get()
+{
+	return static_cast<T*>(static_cast<void*>(store));
+}
+
+// need not be initialized
+template<typename T>
+const T *mempool::block_ptr<T>::optional::get() const
+{
+	return static_cast<const T*>(static_cast<const void*>(store));
+}
+
+template<typename T>
+mempool::block_ptr<T>::optional::~optional()
+{
+	if(initialized)
+		get()->~T();
+}
+
 // TODO make explicit constructor/destructor calls via pointer.
 
 // data races: no dereferencing allowed during construction
@@ -148,7 +205,7 @@ auto mempool::block_ptr<T>::fixed_allocator::construct(Args&&... args) -> index_
 		return i;
 	}
 	i = freelist.front();
-	new (&store[i]) T(std::forward<Args>(args)...);
+	store[i].construct(std::forward<Args>(args)...);
 	freelist.pop();
 	return i;
 }
@@ -161,7 +218,7 @@ mempool::block_ptr<T>::fixed_allocator::fixed_allocator::DEFAULT {};
 template<typename T>
 void mempool::block_ptr<T>::fixed_allocator::destruct(index_t i)
 {
-	store[i].~T();
+	store[i].destruct();
 	freelist.push(i);
 }
 
@@ -169,12 +226,12 @@ void mempool::block_ptr<T>::fixed_allocator::destruct(index_t i)
 template<typename T>
 T& mempool::block_ptr<T>::fixed_allocator::operator[](index_t i)
 {
-	return store[i];
+	return *store[i].get();
 }
 template<typename T>
 const T& mempool::block_ptr<T>::fixed_allocator::operator[](index_t i) const
 {
-	return store[i];
+	return *store[i].get();
 }
 
 template<typename T>

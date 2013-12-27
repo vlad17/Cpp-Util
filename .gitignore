@@ -5,6 +5,7 @@
 # Eclipse project folders
 .cproject
 .project
+.settings
 
 # From github website:
 # Compiled source #
