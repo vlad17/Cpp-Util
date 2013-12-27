@@ -1,12 +1,14 @@
 /*
 * Vladimir Feinberg
 * block_ptr.h
-* 2013-12-24
+* 2013-12-26
 *
 * Defines block_ptr class, which allows for faster use of memory of
 * fixed-size blocks by maintaining a contiguous block of memory.
 *
-* Also defines
+* Also defines weak_block_ptr, which allows for dereferencing an object
+* pointed to by a block_ptr but does not claim ownership of it, unlike
+* the block_ptr.
 */
 
 #ifndef BLOCK_PTR_H_
@@ -14,8 +16,6 @@
 
 #ifndef NDEBUG
 #define BPTR_CHECK 1
-#else
-#define BPTR_CHECK 0
 #endif
 
 #include <queue>
@@ -24,6 +24,8 @@
 
 // TODO consistency ifndef NDEBUG...
 
+// TODO create an index of allocators (?)
+
 // TODO add parallel_fixed_allocator
 // (uses R/W lock, writing for construction if need to reallocate, read otherwise).
 // pfa should inherit privately fixed allocator (need access to vector member,
@@ -31,53 +33,94 @@
 
 namespace mempool
 {
-	// Indexing type
+	/**
+	 * Indexing type index_t is an unsigned type which is used throughout
+	 * the implementation.
+	 *
+	 * std::numeric_limits<index_t>::max() gives the maximum number of objects
+	 * that theoretically can be indexed by a block_ptr at a given instance
+	 * in time.
+	 */
 	typedef unsigned index_t;
 
 	/**
-	 * block_ptr maintains a contiguous memory chunk referenced by
-	 * fixed_allocator. In terms of ownership, it is basically a unique pointer.
+	 * block_ptr refers to an index which is associated with an allocated object
+	 * in a fixed_allocator. The fixed allocator maintains a vector that takes up
+	 * about one PAGE_SIZE bytes initially.
+	 *
+	 * Because the fixed allocator contains a contiguous memory chunk, cache misses
+	 * are minimized by dereferencing the pointer.
+	 *
+	 * Use block_ptr just like a regular pointer. A block pointer owns the object
+	 * it points to, and has move semantics designed in such a way that it behaves
+	 * like a unique_ptr.
+	 *
+	 * The templated type T needs to be move constructible.
 	 */
 	template<typename T>
 	class block_ptr
 	{
 	private:
-		// class inspired by boost::optional<T>, but is simpler
-		// and does not use factories, which copy arguments for construction.
-		// controls deletion/construction of an object.
+		/**
+		 * optional class is inspired by boost::optional<T>, but is simpler and
+		 * does not use factories (which copy arguments for construction).
+		 *
+		 * Allows for explicit construction and destruction of objects.
+		 */
 		class optional
 		{
 		private:
-			bool initialized;
-			char store[sizeof(T)];
+			bool initialized; // boolean tracks current state (necessary for moving)
+			char store[sizeof(T)]; // store object as a sequence of bytes explicitly
 		public:
+			// Constructors
 			template<typename... Args>
-			optional(Args&&... args) :
-				initialized(false) {this->construct(std::forward<Args>(args)...);}
+			optional(Args&&... args);
 			optional(optional&& other);
+			optional(const optional&) = delete;
+			// Assignment operators
+			optional& operator=(const optional&) = delete;
+			optional& operator=(optional&& other);
+			// Explicit construction, destruction
 			template<typename... Args>
 			void construct(Args&&... args);
 			void destruct();
+			// Get pointer to location of stored optional object.
+			// Value of T may be undefined if not valid.
 			T *get();
 			const T *get() const;
+			// Getter for initialized
+			bool valid() const;
 			~optional();
 		};
+		/**
+		 * fixed_allocator maintains a contiguous chunk of memory
+		 * and allows for construction of new objects of the same fixed
+		 * size within it, as well as on-call destruction and in-place
+		 * reconstruction.
+		 */
 		class fixed_allocator
 		{
-		private:
-			static const index_t DEF_PAGE = 4096;
-			std::vector<optional> store;
-			std::queue<index_t> freelist;
-			static fixed_allocator DEFAULT;
+		protected:
+			std::vector<optional> store; // chunk of memory
+			std::queue<index_t> freelist; // list of free entries
+			static fixed_allocator DEFAULT; // default allocator of this type
+			// Default constructor makes empty everything.
 			fixed_allocator():
-				store(DEF_PAGE/sizeof(T)), freelist() {};
+				store(), freelist() {};
+			// Construct, destruct, access object at index
+			// Data races: if construction triggers resize (store.size() == store.capacity()),
+			// then during resize no dereferencing allowed and no destruction is allowed (at all).
+			// Otherwise construction may procede, but at any given time a certain object can
+			// only be dereferenced or destructed.
 			template<typename... Args>
 			index_t construct(Args&&... args);
 			void destruct(index_t i);
 			T& operator[](index_t i);
 			const T& operator[](index_t i) const;
-			friend class block_ptr<T>;
+			friend class block_ptr<T>; // let block_ptr use internals
 		public:
+			// User can only move the allocator
 			fixed_allocator(const fixed_allocator&) = delete;
 			fixed_allocator(fixed_allocator&&) = default;
 		};
@@ -151,6 +194,13 @@ namespace mempool
 	};
 
 }
+template<typename T>
+template<typename... Args>
+mempool::block_ptr<T>::optional::optional(Args&&... args) :
+	initialized(false)
+{
+	this->construct(std::forward<Args>(args)...);
+}
 
 template<typename T>
 mempool::block_ptr<T>::optional::optional(optional&& other) :
@@ -158,6 +208,18 @@ mempool::block_ptr<T>::optional::optional(optional&& other) :
 {
 	if(initialized)
 		new (get()) T(std::move(*other.get()));
+}
+
+template<typename T>
+auto mempool::block_ptr<T>::optional::operator=(optional&& other) -> optional&
+{
+	if(other.initialized)
+	{
+		if(initialized) destruct();
+		new (get()) T(std::move(*other.get()));
+		initialized = true;
+	}
+	return *this;
 }
 
 template<typename T>
@@ -198,10 +260,6 @@ mempool::block_ptr<T>::optional::~optional()
 		get()->~T();
 }
 
-// TODO make explicit constructor/destructor calls via pointer.
-
-// data races: no dereferencing allowed during construction
-// may invalidate parameter pointers, not indices.
 template<typename T>
 template<typename... Args>
 auto mempool::block_ptr<T>::fixed_allocator::construct(Args&&... args) -> index_t
@@ -231,15 +289,16 @@ void mempool::block_ptr<T>::fixed_allocator::destruct(index_t i)
 	freelist.push(i);
 }
 
-// data races: no dereferencing allowed during construction
 template<typename T>
 T& mempool::block_ptr<T>::fixed_allocator::operator[](index_t i)
 {
+	assert(store[i].valid());
 	return *store[i].get();
 }
 template<typename T>
 const T& mempool::block_ptr<T>::fixed_allocator::operator[](index_t i) const
 {
+	assert(store[i].valid());
 	return *store[i].get();
 }
 
