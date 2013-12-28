@@ -39,7 +39,7 @@ namespace mempool
 	 *
 	 * std::numeric_limits<index_t>::max() gives the maximum number of objects
 	 * that theoretically can be indexed by a block_ptr at a given instance
-	 * in time.
+	 * in time for a given allocator.
 	 */
 	typedef unsigned index_t;
 
@@ -127,7 +127,7 @@ namespace mempool
 		// TODO add parallel allocator class here
 		fixed_allocator& allocator; // TODO just use default	?
 		index_t index;
-		const index_t NULLVAL = -1;
+		static const index_t NULLVAL = -1;
 		block_ptr(fixed_allocator& alloc, index_t index) :
 			allocator(alloc), index(index) {}
 		// template magic for easily copyable types (
@@ -254,6 +254,12 @@ const T *mempool::block_ptr<T>::optional::get() const
 }
 
 template<typename T>
+bool mempool::block_ptr<T>::optional::valid() const
+{
+	return initialized;
+}
+
+template<typename T>
 mempool::block_ptr<T>::optional::~optional()
 {
 	if(initialized)
@@ -292,12 +298,14 @@ void mempool::block_ptr<T>::fixed_allocator::destruct(index_t i)
 template<typename T>
 T& mempool::block_ptr<T>::fixed_allocator::operator[](index_t i)
 {
+	assert(i < store.size());
 	assert(store[i].valid());
 	return *store[i].get();
 }
 template<typename T>
 const T& mempool::block_ptr<T>::fixed_allocator::operator[](index_t i) const
 {
+	assert(i < store.size());
 	assert(store[i].valid());
 	return *store[i].get();
 }
