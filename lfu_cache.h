@@ -1,7 +1,7 @@
 /*
 * Vladimir Feinberg
 * lfu_cache.h
-* 2013-12-18
+* 2013-12-28
 *
 * Defines heap_cache, exact_heap_cache, and linked_cache classes,
 * which are implementations of the abstract cache class that eliminate
@@ -117,7 +117,7 @@ namespace lfu
 		 * Not noexcept. See move assignment.
 		 */
 		heap_cache(heap_cache&& other) :
-			heap_cache(1) {*this = std::forward(other);}
+			heap_cache(1) {*this = std::forward<heap_cache>(other);}
 		/*
 		 * INPUT:
 		 * BEHAVIOR:

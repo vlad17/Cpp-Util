@@ -1,7 +1,7 @@
 /*
 * Vladimir Feinberg
 * fibheap.h
-* 2013-12-18
+* 2013-12-28
 *
 * Declares all methods that a decrease-key priority queue must have,
 * implements it as a Fibonacci heap. Fibonacci heaps have similar
@@ -22,10 +22,12 @@
 #endif
 
 #include <list>
+#include <ostream>
 #include <vector>
 #include <queue>
 #include <cmath>
 #include <cassert>
+#include <cstddef>
 
 #if FIB_CHECK
 #include <unordered_set>

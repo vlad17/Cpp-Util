@@ -6,17 +6,26 @@
  * Contains some tests for the data structures, prints to stdout.
  */
 
-#include <iostream>
 
 #include "fibheap.h"
 #include "lfu_cache.h"
 #include "block_ptr.h"
+#include "blist.h"
+
+#include <iostream>
 #include <random>
 #include <array>
+#include <list>
+#include <numeric>
+#include <ctime>
+#include <functional>
 
 using namespace std;
 
 const int SEED = 0;
+minstd_rand0 gen(SEED);
+uniform_real_distribution<double> uniform(
+		numeric_limits<double>::min()/2+1, numeric_limits<double>::max()/2-1);
 
 void cache_test(), fibheap_test(), bptr_test();
 
@@ -24,6 +33,43 @@ int main()
 {
 	bptr_test();
 	return 0;
+}
+
+template<typename T, size_t N>
+void testlists(std::function<T(void)> f)
+{
+	cout << "Comparing stl and my list for type size " << sizeof(T)
+			<< " and " << N << "elements\n";
+	array<T, N> elements;
+	for(size_t i = 0; i < N; ++i)
+		elements[i] = f();
+	blist<T> mylist;
+	list<T>  stlist;
+	clock_t time;
+	double duration;
+	cout << "\tStl emplace_back: ";
+	time = clock();
+	for(auto& i : elements)
+		stlist.emplace_back(i);
+	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
+	cout << duration << endl;
+	cout << "\tMy emplace_back: ";
+	time = clock();
+	for(auto& i : elements)
+		mylist.emplace_back(i);
+	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
+	cout << duration << endl;
+	cout << "\tStl fwd postinc iterate: ";
+	time = clock();
+	for(auto it = stlist.begin(); it != stlist.end(); ++it)
+		asm("");
+	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
+	cout << "\tMy fwd postinc iterate: ";
+	time = clock();
+	for(auto it = mylist.begin(); it != mylist.end(); ++it)
+		asm("");
+	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
+	cout << duration << endl;
 }
 
 void bptr_test()
@@ -47,6 +93,47 @@ void bptr_test()
 	cout << "\tcopy: (" << wptr->first << "," << wptr->second << ")" << endl;
 	cout << "cref: " << is_reference<pointer::const_reference>::value << endl;
 	cout << "Block list test\n";
+
+	blist<int> blocklist;
+	cout << "empty block list" << endl;
+	cout << blocklist << endl;
+	cout << "fill front 1..10" << endl;
+	for(int i = 1; i <= 10; ++i)
+		blocklist.emplace_front(i);
+	cout << blocklist << endl;
+	cout << "clear" << endl;
+	blocklist.clear();
+	cout << blocklist << endl;
+	cout << "fill back 1..10" << endl;
+	for(int i = 1; i <= 10; ++i)
+		blocklist.emplace_back(i);
+	cout << blocklist << endl;
+	cout << "clear" << endl;
+	blocklist.clear();
+	cout << blocklist << endl;
+	cout << "fill back -1..7" << endl;
+	for(int i = -1; i <= 7; ++i)
+		blocklist.emplace_back(i);
+	cout << blocklist << endl;
+	cout << "pop_front twice" << endl;
+	blocklist.pop_front();
+	blocklist.pop_front();
+	cout << blocklist << endl;
+	cout << "pop_back twice" << endl;
+	blocklist.pop_back();
+	blocklist.pop_back();
+	cout << blocklist << endl;
+	cout << "fill front 1..5" << endl;
+	for(int i = 1; i <= 5; ++i)
+		blocklist.emplace_front(i);
+	cout << blocklist << endl;
+	// TODO move construct, copy construct.
+#ifdef NDEBUG
+	cout << "stress tests / comparison to stl list: " << endl;
+	testlists<int, 1000000>([](){return gen();});
+	testlists<double, 1000000>([](){return uniform(gen);});
+	testlists<lfu::heap_cache<int,int>,10000 >([](){return lfu::heap_cache<int,int>{};});
+#endif /* NDEBUG */
 }
 
 void cache_test()
@@ -82,7 +169,6 @@ void cache_test()
 		lhc.insert(make_pair(i,i));
 	cout << lhc << endl;
 	cout << "Lookup 500 times, randomly." << endl;
-	minstd_rand0 gen(SEED);
 	for(int i = 0; i < 500; ++i)
 		lhc.lookup(gen()&127);
 	cout << lhc << endl;
@@ -220,7 +306,6 @@ void fibheap_test()
 	int constexpr MAX_KEYS = STRESS_REPS/100;
 	// will not have all keys, just some for tests
 	array<fibheap<int>::key_type, MAX_KEYS> keyarr;
-	minstd_rand0 gen(0);
 	for(int i = 0; i < STRESS_REPS; ++i)
 		if(gen()&1)
 			if(i < MAX_KEYS)
