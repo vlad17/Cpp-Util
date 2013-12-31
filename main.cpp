@@ -6,6 +6,7 @@
  * Contains some tests for the data structures, prints to stdout.
  */
 
+//#define NDEBUG
 
 #include "fibheap.h"
 #include "lfu_cache.h"
@@ -39,7 +40,7 @@ template<typename T, size_t N>
 void testlists(std::function<T(void)> f)
 {
 	cout << "Comparing stl and my list for type size " << sizeof(T)
-			<< " and " << N << "elements\n";
+			<< " and " << N << " elements\n";
 	array<T, N> elements;
 	for(size_t i = 0; i < N; ++i)
 		elements[i] = f();
@@ -128,7 +129,7 @@ void bptr_test()
 		blocklist.emplace_front(i);
 	cout << blocklist << endl;
 	// TODO move construct, copy construct.
-#ifdef NDEBUG
+#if 1//def NDEBUG
 	cout << "stress tests / comparison to stl list: " << endl;
 	testlists<int, 1000000>([](){return gen();});
 	testlists<double, 1000000>([](){return uniform(gen);});
@@ -321,7 +322,7 @@ void fibheap_test()
 			if(moved.top() < MAX_KEYS)
 			{
 				fibheap<int>::key_type k = keyarr[moved.top()];
-				if(k != moved.pop());
+				if(k != moved.pop())
 					cout << "\tError: popped key does not match saved key" << endl;
 			}
 			moved.pop();

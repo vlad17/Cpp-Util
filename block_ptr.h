@@ -28,7 +28,7 @@
 	template<typename T> bool operator!=(x xarg, y yarg) \
 	{return !(xarg == yarg);}
 
-// TODO consistency ifndef NDEBUG...
+// TODO nullptr constructor
 
 // TODO create an index of allocators (?)
 
