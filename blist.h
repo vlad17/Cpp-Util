@@ -30,9 +30,8 @@ class blist
 		weak_node_ptr prev;
 		T val;
 		template<typename... Args>
-		node(node_alloc& alloc, Args&&... args) :
-			next(unique_node_ptr::create_null(alloc)),
-			prev(), val(std::forward<Args>(args)...) {}
+		node(Args&&... args) :
+			next(),	prev(), val(std::forward<Args>(args)...) {}
 		node(node&& other) :
 			next(std::move(other.next)), prev(other.prev),
 			val(std::move(other.val)) {}
@@ -62,9 +61,8 @@ class blist
 public:
 	typedef _iterator iterator;
 	blist() :
-		alloc(unique_node_ptr::generate_allocator()),
-		head(unique_node_ptr::create_null(alloc)),
-		tail(head), _size(0) {}
+		//alloc(unique_node_ptr::generate_allocator()),
+		head(), tail(), _size(0) {}
 	size_t size() const {return _size;}
 	bool empty() const {return _size == 0;}
 	template<typename... Args>
@@ -94,7 +92,7 @@ template<typename... Args>
 void blist<T>::emplace_front(Args&&... args)
 {
 	unique_node_ptr newnode =
-			unique_node_ptr::create(alloc, alloc, std::forward<Args>(args)...);
+			unique_node_ptr::create(alloc, std::forward<Args>(args)...);
 	if(empty())
 		tail = head = std::move(newnode);
 	else
@@ -111,7 +109,7 @@ template<typename... Args>
 void blist<T>::emplace_back(Args&&... args)
 {
 	unique_node_ptr newnode =
-			unique_node_ptr::create(alloc, alloc, std::forward<Args>(args)...);
+			unique_node_ptr::create(alloc, std::forward<Args>(args)...);
 	if(empty())
 		tail = head = std::move(newnode);
 	else

@@ -152,7 +152,6 @@ namespace mempool
 		typedef const T* const_pointer;
 		typedef fixed_allocator b_allocator;
 		//typedef parallel_fixed_allocator parallel_allocator;
-		static block_ptr create_null(b_allocator& alloc);
 		template<typename... Args>
 		static block_ptr create(Args&&... args);
 		template<typename... Args>
@@ -163,6 +162,10 @@ namespace mempool
 		//static block_ptr create_parallel(parallel_allocator& alloc, Args&&... args);
 		static b_allocator generate_allocator();
 		// parallel_allocator generate_parallel_allocator();
+		block_ptr() :
+			allocator(nullptr), index(NULLVAL) {}
+		block_ptr(std::nullptr_t nptr) :
+			block_ptr() {}
 		block_ptr(const block_ptr&) = delete;
 		block_ptr(block_ptr&& bp) noexcept :
 			allocator(bp.allocator), index(std::move(bp.index))
@@ -199,6 +202,8 @@ namespace mempool
 		typedef typename block_ptr<T>::const_pointer const_pointer;
 		weak_block_ptr() :
 			bptr(nullptr) {}
+		weak_block_ptr(std::nullptr_t nptr) :
+			weak_block_ptr() {}
 		weak_block_ptr(block_ptr<T>& bptr) :
 			bptr(&bptr) {}
 		weak_block_ptr(const weak_block_ptr& other) :
@@ -350,12 +355,6 @@ const T& mempool::block_ptr<T>::fixed_allocator::operator[](index_t i) const
 	assert(i < store.size());
 	assert(store[i].valid());
 	return *store[i].get();
-}
-
-template<typename T>
-auto mempool::block_ptr<T>::create_null(b_allocator& alloc) -> block_ptr<T>
-{
-	return block_ptr<T>(alloc);
 }
 
 template<typename T>
