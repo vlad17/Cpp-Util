@@ -23,7 +23,7 @@ class blist
 	typedef mempool::block_ptr<node> unique_node_ptr;
 	typedef mempool::weak_block_ptr<node> weak_node_ptr;
 	typedef decltype(unique_node_ptr::generate_allocator()) node_alloc;
-	class node
+	class node // owns everything past it.
 	{
 	public:
 		unique_node_ptr next;
@@ -61,7 +61,7 @@ class blist
 public:
 	typedef _iterator iterator;
 	blist() :
-		//alloc(unique_node_ptr::generate_allocator()),
+		alloc(unique_node_ptr::generate_allocator()),
 		head(), tail(), _size(0) {}
 	size_t size() const {return _size;}
 	bool empty() const {return _size == 0;}
@@ -92,7 +92,7 @@ template<typename... Args>
 void blist<T>::emplace_front(Args&&... args)
 {
 	unique_node_ptr newnode =
-			unique_node_ptr::create(alloc, std::forward<Args>(args)...);
+			unique_node_ptr::create_alloc(alloc, std::forward<Args>(args)...);
 	if(empty())
 		tail = head = std::move(newnode);
 	else
@@ -109,7 +109,7 @@ template<typename... Args>
 void blist<T>::emplace_back(Args&&... args)
 {
 	unique_node_ptr newnode =
-			unique_node_ptr::create(alloc, std::forward<Args>(args)...);
+			unique_node_ptr::create_alloc(alloc, std::forward<Args>(args)...);
 	if(empty())
 		tail = head = std::move(newnode);
 	else

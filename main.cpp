@@ -6,7 +6,7 @@
  * Contains some tests for the data structures, prints to stdout.
  */
 
-//#define NDEBUG
+#define NDEBUG
 
 #include "fibheap.h"
 #include "lfu_cache.h"
@@ -65,6 +65,19 @@ void testlists(std::function<T(void)> f)
 	for(auto it = stlist.begin(); it != stlist.end(); ++it)
 		asm("");
 	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
+	cout << duration << endl;
+	cout << "\tMy fwd postinc iterate: ";
+	time = clock();
+	for(auto it = mylist.begin(); it != mylist.end(); ++it)
+		asm("");
+	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
+	cout << duration << endl;
+	cout << "\tStl fwd postinc iterate: ";
+	time = clock();
+	for(auto it = stlist.begin(); it != stlist.end(); ++it)
+		asm("");
+	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
+	cout << duration << endl;
 	cout << "\tMy fwd postinc iterate: ";
 	time = clock();
 	for(auto it = mylist.begin(); it != mylist.end(); ++it)
@@ -75,6 +88,14 @@ void testlists(std::function<T(void)> f)
 
 void bptr_test()
 {
+	blist<int> mylist;
+	cout << mylist << endl;
+	mylist.emplace_back(1);
+	cout << mylist << endl;
+	mylist.emplace_back(2);
+	cout << mylist << endl;
+	mylist.emplace_back(3);
+	cout << mylist << endl;
 	cout << "Block pointer test\n";
 	typedef mempool::block_ptr<pair<int, int> > pointer;
 	pointer ptr = pointer::create(0,1);
@@ -129,7 +150,7 @@ void bptr_test()
 		blocklist.emplace_front(i);
 	cout << blocklist << endl;
 	// TODO move construct, copy construct.
-#if 1//def NDEBUG
+#ifdef NDEBUG
 	cout << "stress tests / comparison to stl list: " << endl;
 	testlists<int, 1000000>([](){return gen();});
 	testlists<double, 1000000>([](){return uniform(gen);});
