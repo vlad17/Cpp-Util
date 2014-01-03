@@ -60,25 +60,17 @@ void testlists(std::function<T(void)> f)
 		mylist.emplace_back(i);
 	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
 	cout << duration << endl;
-	cout << "\tStl fwd postinc iterate: ";
+	cout << "\tStl fwd postinc iterate (after warmup): ";
+	for(auto it = stlist.begin(); it != stlist.end(); ++it)
+		asm("");
 	time = clock();
 	for(auto it = stlist.begin(); it != stlist.end(); ++it)
 		asm("");
 	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
 	cout << duration << endl;
-	cout << "\tMy fwd postinc iterate: ";
-	time = clock();
+	cout << "\tMy fwd postinc iterate (after warmup): ";
 	for(auto it = mylist.begin(); it != mylist.end(); ++it)
 		asm("");
-	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
-	cout << duration << endl;
-	cout << "\tStl fwd postinc iterate: ";
-	time = clock();
-	for(auto it = stlist.begin(); it != stlist.end(); ++it)
-		asm("");
-	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
-	cout << duration << endl;
-	cout << "\tMy fwd postinc iterate: ";
 	time = clock();
 	for(auto it = mylist.begin(); it != mylist.end(); ++it)
 		asm("");
