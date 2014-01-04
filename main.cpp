@@ -6,7 +6,7 @@
  * Contains some tests for the data structures, prints to stdout.
  */
 
-#define NDEBUG
+//#define NDEBUG
 
 #include "fibheap.h"
 #include "lfu_cache.h"
@@ -80,17 +80,9 @@ void testlists(std::function<T(void)> f)
 
 void bptr_test()
 {
-	blist<int> mylist;
-	cout << mylist << endl;
-	mylist.emplace_back(1);
-	cout << mylist << endl;
-	mylist.emplace_back(2);
-	cout << mylist << endl;
-	mylist.emplace_back(3);
-	cout << mylist << endl;
 	cout << "Block pointer test\n";
 	typedef mempool::block_ptr<pair<int, int> > pointer;
-	pointer ptr = pointer::create(0,1);
+	pointer ptr = pointer(0,1);
 	cout << "Pair (0,1): " << endl;
 	cout << "\tfirst:  " << ptr->first << '\n';
 	cout << "\tsecond: " << ptr->second << '\n';

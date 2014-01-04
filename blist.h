@@ -91,8 +91,7 @@ template<typename T>
 template<typename... Args>
 void blist<T>::emplace_front(Args&&... args)
 {
-	unique_node_ptr newnode =
-			unique_node_ptr::create_alloc(alloc, std::forward<Args>(args)...);
+	unique_node_ptr newnode(alloc, std::forward<Args>(args)...);
 	if(empty())
 		tail = head = std::move(newnode);
 	else
@@ -108,8 +107,7 @@ template<typename T>
 template<typename... Args>
 void blist<T>::emplace_back(Args&&... args)
 {
-	unique_node_ptr newnode =
-			unique_node_ptr::create_alloc(alloc, std::forward<Args>(args)...);
+	unique_node_ptr newnode(alloc, std::forward<Args>(args)...);
 	if(empty())
 		tail = head = std::move(newnode);
 	else
