@@ -6,7 +6,7 @@
  * Contains some tests for the data structures, prints to stdout.
  */
 
-//#define NDEBUG
+#define NDEBUG
 
 #include "fibheap.h"
 #include "lfu_cache.h"
@@ -25,8 +25,6 @@ using namespace std;
 
 const int SEED = 0;
 minstd_rand0 gen(SEED);
-uniform_real_distribution<double> uniform(
-		numeric_limits<double>::min()/2+1, numeric_limits<double>::max()/2-1);
 
 void cache_test(), fibheap_test(), bptr_test();
 
@@ -66,16 +64,16 @@ void testlists(std::function<T(void)> f)
 	time = clock();
 	for(auto it = stlist.begin(); it != stlist.end(); ++it)
 		asm("");
-	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
-	cout << duration << endl;
+	duration = 1000*(std::clock() - time) / (double) CLOCKS_PER_SEC;
+	cout << duration << "ms" << endl;
 	cout << "\tMy fwd postinc iterate (after warmup): ";
 	for(auto it = mylist.begin(); it != mylist.end(); ++it)
 		asm("");
 	time = clock();
 	for(auto it = mylist.begin(); it != mylist.end(); ++it)
 		asm("");
-	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
-	cout << duration << endl;
+	duration = 1000*(std::clock() - time) / (double) CLOCKS_PER_SEC;
+	cout << duration << "ms" << endl;
 }
 
 void bptr_test()
@@ -137,7 +135,7 @@ void bptr_test()
 #ifdef NDEBUG
 	cout << "stress tests / comparison to stl list: " << endl;
 	testlists<int, 1000000>([](){return gen();});
-	testlists<double, 1000000>([](){return uniform(gen);});
+	testlists<double, 1000000>([](){return gen();});
 	testlists<lfu::heap_cache<int,int>,10000 >([](){return lfu::heap_cache<int,int>{};});
 #endif /* NDEBUG */
 }

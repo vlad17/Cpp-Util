@@ -14,6 +14,8 @@
 #ifndef BLOCK_PTR_H_
 #define BLOCK_PTR_H_
 
+#define INLINE inline __attribute__ ((always_inline))
+
 #ifndef NDEBUG
 #define BPTR_CHECK 1
 #endif
@@ -22,18 +24,16 @@
 #include <vector>
 #include <cassert>
 
-// TODO inline everything.
-
 // defines default not equal operator for two types x and y, for a template
 // type T
 #define _DEFAULT_NEQ_OPERATOR_(x, y) \
-	template<typename T> bool operator!=(x xarg, y yarg) \
+	template<typename T> INLINE bool operator!=(x xarg, y yarg) \
 	{return !(xarg == yarg);}
 
 // defines default equal operator for two types x and y, for a template
 // type T, assuming == is defined for y as lhs and x as rhs.
 #define _SWAP_EQ_OPERATOR_(x, y) \
-	template<typename T> bool operator==(x xarg, y yarg) \
+	template<typename T> INLINE bool operator==(x xarg, y yarg) \
 	{return yarg == xarg;}
 
 // TODO create an index of allocators (?)
@@ -83,6 +83,8 @@ namespace mempool
 	template<typename T>
 	class base_ptr
 	{
+	public:
+		typedef index_t _allocator;
 	private:
 		/**
 		 * optional class is inspired by boost::optional<T>, but is simpler and
@@ -106,14 +108,14 @@ namespace mempool
 			optional& operator=(optional&& other);
 			// Explicit construction, destruction
 			template<typename... Args>
-			void construct(Args&&... args);
-			void destruct();
+			INLINE void construct(Args&&... args);
+			INLINE void destruct();
 			// Get pointer to location of stored optional object.
 			// Value of T may be undefined if not valid.
-			T *get();
-			const T *get() const;
+			INLINE T *get();
+			INLINE const T *get() const;
 			// Getter for initialized
-			bool valid() const;
+			INLINE bool valid() const;
 			~optional();
 		};
 		/**
@@ -139,38 +141,39 @@ namespace mempool
 			// only be dereferenced or destructed.
 			template<typename... Args>
 			index_t construct(Args&&... args);
-			void destruct(index_t i);
-			T& operator[](index_t i);
-			const T& operator[](index_t i) const;
+			INLINE void destruct(index_t i);
+			INLINE T& operator[](index_t i);
+			INLINE const T& operator[](index_t i) const;
 			fixed_allocator(const fixed_allocator&) = delete;
 			fixed_allocator(fixed_allocator&&) = default;
 			virtual ~fixed_allocator() {}
 		};
 		// TODO parallel allocator
-		// no ownership of allocator, always a valid one if index is valid
-		fixed_allocator *allocator;
+		// If index is valid then allocator must be valid
+		_allocator allocator; // first bit for parallel.
 		// TODO just use index?
 		// TODO just use default?
 		index_t index;
 		static const index_t NULLVAL = -1;
+		static std::vector<fixed_allocator> fallocators;
+		fixed_allocator& alloc() const {return fallocators[allocator];}
+		// TODO bitwise ops here ^^^^
 	protected:
 		// Constructors
 		template<typename... Args>
-		base_ptr(fixed_allocator &alloc, Args&&... args) :
-			allocator(&alloc), index(alloc.construct(std::forward<Args>(args)...)) {}
+		base_ptr(_allocator alloci, Args&&... args) :
+			allocator(alloci), index(alloc().construct(std::forward<Args>(args)...)) {}
 		base_ptr() :
-			allocator(nullptr), index(NULLVAL) {}
+			allocator(NULLVAL), index(NULLVAL) {}
 		// Access to default allocators
-		static fixed_allocator& default_allocator() {return fixed_allocator::DEFAULT;}
+		static _allocator default_allocator();
 		// parallel TODO
 		// Ability to destruct for derived classes
-		void safe_destruct()
-		{if(*this != nullptr) allocator->destruct(index);}
-		void set_null()
-		{index = NULLVAL;}
-		void safe_destruct_set_null()
-		{if(*this == nullptr) return; allocator->destruct(index); index = NULLVAL;}
-		base_ptr& operator=(base_ptr other)
+		INLINE void safe_destruct() {if(*this != nullptr) alloc().destruct(index);}
+		INLINE void set_null() {index = NULLVAL;}
+		INLINE void safe_destruct_set_null()
+		{if(*this == nullptr) return; alloc().destruct(index); index = NULLVAL;}
+		INLINE base_ptr& operator=(base_ptr other)
 		{allocator = other.allocator; index = other.index; return *this;}
 	public:
 		// Typebase_ptrdefs
@@ -179,23 +182,22 @@ namespace mempool
 		typedef typename easily_copyable<T>::type const_reference;
 		typedef T* pointer;
 		typedef const T* const_pointer;
-		typedef fixed_allocator _allocator;
 		// Assignment & Copying (just trivially copies)
 		base_ptr(const base_ptr& other) :
 			allocator(other.allocator), index(other.index) {}
-		base_ptr& operator=(std::nullptr_t nptr) { index = NULLVAL; return *this;}
+		INLINE base_ptr& operator=(std::nullptr_t nptr) { index = NULLVAL; return *this;}
 		// Equality
-		bool operator==(std::nullptr_t nptr) {return index == NULLVAL;}
-		bool operator==(base_ptr other)
+		INLINE bool operator==(std::nullptr_t nptr) {return index == NULLVAL;}
+		INLINE bool operator==(base_ptr other)
 		{
 			if(index != other.index) return false;
 			return allocator == other.allocator || index == NULLVAL;
 		}
 		// Observers - refrences, pointers only valid during call
-		reference operator*() const {assert(*this != nullptr); return (*allocator)[index];}
-		const_reference get_cref() const {assert(*this != nullptr); return (*allocator)[index];}
-		pointer operator->() const {assert(*this != nullptr); return &**this;}
-		const_pointer get_cptr() const {assert(*this != nullptr); return &**this;}
+		INLINE reference operator*() const {assert(*this != nullptr); return alloc()[index];}
+		INLINE const_reference get_cref() const {assert(*this != nullptr); return alloc()[index];}
+		INLINE pointer operator->() const {assert(*this != nullptr); return &**this;}
+		INLINE const_pointer get_cptr() const {assert(*this != nullptr); return &**this;}
 		// Static factories
 		static _allocator generate_allocator();
 		//static parallel_allocator generate_parallel_allocator();
@@ -237,10 +239,10 @@ namespace mempool
 		block_ptr(block_ptr&& bp) noexcept :
 				base_ptr<T>(bp) {bp.set_null();}
 		// Assignment operators
-		block_ptr<T>& operator=(const block_ptr<T>&) = delete;
-		block_ptr<T>& operator=(block_ptr&& other)
+		INLINE block_ptr<T>& operator=(const block_ptr<T>&) = delete;
+		INLINE block_ptr<T>& operator=(block_ptr&& other)
 		{this->base_ptr<T>::operator=(other); other.set_null(); return *this;}
-		block_ptr<T>& operator=(std::nullptr_t other)
+		INLINE block_ptr<T>& operator=(std::nullptr_t other)
 		{this->safe_destruct_set_null(); return *this;}
 		virtual ~block_ptr() {this->safe_destruct();}
 	};
@@ -256,7 +258,7 @@ namespace mempool
 			base_ptr<T>() {}
 		weak_block_ptr(base_ptr<T> bptr) :
 			base_ptr<T>(bptr) {}
-		weak_block_ptr<T>& operator=(base_ptr<T> other)
+		INLINE weak_block_ptr<T>& operator=(base_ptr<T> other)
 		{this->base_ptr<T>::operator=(other); return *this;}
 		virtual ~weak_block_ptr() {};
 	};
@@ -380,9 +382,21 @@ const T& mempool::base_ptr<T>::fixed_allocator::operator[](index_t i) const
 }
 
 template<typename T>
+std::vector<typename mempool::base_ptr<T>::fixed_allocator>
+mempool::base_ptr<T>::fallocators {};
+
+template<typename T>
 auto mempool::base_ptr<T>::generate_allocator() -> _allocator
 {
-	return fixed_allocator();
+	fallocators.emplace_back();
+	return fallocators.size()-1;
+}
+
+template<typename T>
+auto mempool::base_ptr<T>::default_allocator() -> _allocator
+{
+	if(fallocators.empty()) return generate_allocator();
+	return 0;
 }
 
 #endif /* BLOCK_PTR_H_ */
