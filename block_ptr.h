@@ -24,6 +24,8 @@
 #include <vector>
 #include <cassert>
 
+// TODO make constructors better...
+
 // defines default not equal operator for two types x and y, for a template
 // type T
 #define _DEFAULT_NEQ_OPERATOR_(x, y) \
@@ -71,17 +73,22 @@ namespace mempool
 		typedef typename aux<std::is_integral<T>::value, T>::type type;
 	};
 
+	template<typename T>
+	class block_ptr;
+
 	/**
-	 * base_ptr refers to an index which is associated with an allocated object
+	 * weak_block_ptr refers to an index which is associated with an allocated object
 	 * in an _allocator.
 	 *
 	 * The _allocator refers to a fixed allocator maintains a contiguous memory
 	 * chunk, so cache misses are minimized by dereferencing the pointer.
 	 *
 	 * The templated type T needs to be move constructible.
+	 *
+	 * The weak_block_pointer does not own the refered index.
 	 */
 	template<typename T>
-	class base_ptr
+	class weak_block_ptr
 	{
 	public:
 		typedef index_t _allocator;
@@ -158,13 +165,10 @@ namespace mempool
 		static std::vector<fixed_allocator> fallocators;
 		fixed_allocator& alloc() const {return fallocators[allocator];}
 		// TODO bitwise ops here ^^^^
-	protected:
-		// Constructors
+		// Object-generating Constructors
 		template<typename... Args>
-		base_ptr(_allocator alloci, Args&&... args) :
+		weak_block_ptr(_allocator alloci, Args&&... args) :
 			allocator(alloci), index(alloc().construct(std::forward<Args>(args)...)) {}
-		base_ptr() :
-			allocator(NULLVAL), index(NULLVAL) {}
 		// Access to default allocators
 		static _allocator default_allocator();
 		// parallel TODO
@@ -173,26 +177,39 @@ namespace mempool
 		INLINE void set_null() {index = NULLVAL;}
 		INLINE void safe_destruct_set_null()
 		{if(*this == nullptr) return; alloc().destruct(index); index = NULLVAL;}
-		INLINE base_ptr& operator=(base_ptr other)
-		{allocator = other.allocator; index = other.index; return *this;}
+		friend class block_ptr<T>;
 	public:
-		// Typebase_ptrdefs
+		// Typeweak_block_ptrdefs
 		typedef T type;
 		typedef T& reference;
 		typedef typename easily_copyable<T>::type const_reference;
 		typedef T* pointer;
 		typedef const T* const_pointer;
-		// Assignment & Copying (just trivially copies)
-		base_ptr(const base_ptr& other) :
+		// Construction
+		weak_block_ptr(const weak_block_ptr& other) :
 			allocator(other.allocator), index(other.index) {}
-		INLINE base_ptr& operator=(std::nullptr_t nptr) { index = NULLVAL; return *this;}
+		weak_block_ptr(const block_ptr<T>& other) :
+			allocator(other.weak().allocator), index(other.weak().index) {}
+		weak_block_ptr() :
+			allocator(NULLVAL), index(NULLVAL) {}
+		weak_block_ptr(std::nullptr_t nptr) :
+			allocator(NULLVAL), index(NULLVAL) {}
+		// Assignment
+		INLINE weak_block_ptr& operator=(std::nullptr_t nptr)
+		{index = NULLVAL; return *this;}
+		INLINE weak_block_ptr<T>& operator=(weak_block_ptr<T> other)
+		{allocator = other.allocator; index = other.index; return *this;}
+		INLINE weak_block_ptr<T>& operator=(const block_ptr<T>& other)
+		{return *this = other.weak();}
 		// Equality
 		INLINE bool operator==(std::nullptr_t nptr) {return index == NULLVAL;}
-		INLINE bool operator==(base_ptr other)
+		INLINE bool operator==(weak_block_ptr other)
 		{
 			if(index != other.index) return false;
 			return allocator == other.allocator || index == NULLVAL;
 		}
+		INLINE bool operator==(const block_ptr<T>& other)
+		{return *this == other.weak();}
 		// Observers - refrences, pointers only valid during call
 		INLINE reference operator*() const {assert(*this != nullptr); return alloc()[index];}
 		INLINE const_reference get_cref() const {assert(*this != nullptr); return alloc()[index];}
@@ -202,13 +219,14 @@ namespace mempool
 		static _allocator generate_allocator();
 		//static parallel_allocator generate_parallel_allocator();
 		// Destructor
-		virtual ~base_ptr() {}
+		virtual ~weak_block_ptr() {}
 	};
 
-	_DEFAULT_NEQ_OPERATOR_(base_ptr<T>, std::nullptr_t)
-	_DEFAULT_NEQ_OPERATOR_(std::nullptr_t, base_ptr<T>)
-	_DEFAULT_NEQ_OPERATOR_(base_ptr<T>, base_ptr<T>)
-	_SWAP_EQ_OPERATOR_(std::nullptr_t, base_ptr<T>)
+	_DEFAULT_NEQ_OPERATOR_(weak_block_ptr<T>, std::nullptr_t)
+	_DEFAULT_NEQ_OPERATOR_(std::nullptr_t, weak_block_ptr<T>)
+	_DEFAULT_NEQ_OPERATOR_(weak_block_ptr<T>, weak_block_ptr<T>)
+	_SWAP_EQ_OPERATOR_(std::nullptr_t, weak_block_ptr<T>)
+	_SWAP_EQ_OPERATOR_(const block_ptr<T>, weak_block_ptr<T>)
 
 	// data races: no dereferencing allowed during vector expansion
 	// in construction.
@@ -219,61 +237,71 @@ namespace mempool
 	 * like a unique_ptr.
 	 */
 	template<typename T>
-	class block_ptr : public base_ptr<T>
+	class block_ptr
 	{
+	private:
+		weak_block_ptr<T> wptr;
 	public:
-		// Constructors
+		// Public Typedefs
+		typedef typename weak_block_ptr<T>::_allocator _allocator;
+		typedef typename weak_block_ptr<T>::type type;
+		typedef typename weak_block_ptr<T>::reference reference;
+		typedef typename weak_block_ptr<T>::const_reference const_reference;
+		typedef typename weak_block_ptr<T>::pointer pointer;
+		typedef typename weak_block_ptr<T>::const_pointer const_pointer;
+		// Object-creating Constructors
 		template<typename... Args>
-		block_ptr(typename block_ptr<T>::_allocator &alloc, Args&&... args) :
-			base_ptr<T>(alloc, std::forward<Args>(args)...) {}
+		block_ptr(_allocator alloc, Args&&... args) :
+			wptr(alloc, std::forward<Args>(args)...) {}
 		template<typename... Args>
 		block_ptr(Args&&... args) :
-			base_ptr<T>(block_ptr<T>::default_allocator(), std::forward<Args>(args)...) {}
+			wptr(weak_block_ptr<T>::default_allocator(), std::forward<Args>(args)...) {}
+		// Movement constructors
 		block_ptr() :
-			base_ptr<T>() {}
+			wptr() {}
 		block_ptr(std::nullptr_t nptr) :
-			base_ptr<T>() {}
+			wptr() {}
 		// No copy
 		block_ptr(const block_ptr&) = delete;
 		// Movement sets moved pointer to null.
 		block_ptr(block_ptr&& bp) noexcept :
-				base_ptr<T>(bp) {bp.set_null();}
+			wptr(bp) {bp.wptr.set_null();}
 		// Assignment operators
 		INLINE block_ptr<T>& operator=(const block_ptr<T>&) = delete;
 		INLINE block_ptr<T>& operator=(block_ptr&& other)
-		{this->base_ptr<T>::operator=(other); other.set_null(); return *this;}
+		{wptr = other.weak(); other.wptr.set_null(); return *this;}
 		INLINE block_ptr<T>& operator=(std::nullptr_t other)
-		{this->safe_destruct_set_null(); return *this;}
-		virtual ~block_ptr() {this->safe_destruct();}
+		{wptr.safe_destruct_set_null(); return *this;}
+		// Equality
+		INLINE bool operator==(std::nullptr_t nptr) {return wptr == nptr;}
+		INLINE bool operator==(const block_ptr<T>& other) {return wptr == other.wptr;}
+		// Observers
+		INLINE weak_block_ptr<T> weak() const {return wptr;}
+		INLINE reference operator*() const {return *wptr;}
+		INLINE const_reference get_cref() const {return *wptr;}
+		INLINE pointer operator->() const {return &**this;}
+		INLINE const_pointer get_cptr() const {return &**this;}
+		// Static factories
+		static _allocator generate_allocator() {return weak_block_ptr<T>::generate_allocator();}
+		//static parallel_allocator generate_parallel_allocator();
+		// Destructor
+		virtual ~block_ptr() {wptr.safe_destruct();}
 	};
 
-	// no ownership
-	template<typename T>
-	class weak_block_ptr : public base_ptr<T>
-	{
-	public:
-		weak_block_ptr() :
-			base_ptr<T>() {}
-		weak_block_ptr(std::nullptr_t nptr) :
-			base_ptr<T>() {}
-		weak_block_ptr(base_ptr<T> bptr) :
-			base_ptr<T>(bptr) {}
-		INLINE weak_block_ptr<T>& operator=(base_ptr<T> other)
-		{this->base_ptr<T>::operator=(other); return *this;}
-		virtual ~weak_block_ptr() {};
-	};
+	_DEFAULT_NEQ_OPERATOR_(std::nullptr_t, const block_ptr<T>&)
+	_DEFAULT_NEQ_OPERATOR_(const block_ptr<T>&, const block_ptr<T>&)
 }
 
 template<typename T>
 template<typename... Args>
-mempool::base_ptr<T>::optional::optional(Args&&... args) :
+mempool::weak_block_ptr<T>::optional::optional(Args&&... args) :
 	initialized(false)
 {
 	this->construct(std::forward<Args>(args)...);
 }
 
 template<typename T>
-mempool::base_ptr<T>::optional::optional(optional&& other) :
+mempool::weak_block_ptr<T>::optional::optional(optional&& other) :
 	initialized(other.initialized)
 {
 	if(initialized)
@@ -281,7 +309,7 @@ mempool::base_ptr<T>::optional::optional(optional&& other) :
 }
 
 template<typename T>
-auto mempool::base_ptr<T>::optional::operator=(optional&& other) -> optional&
+auto mempool::weak_block_ptr<T>::optional::operator=(optional&& other) -> optional&
 {
 	if(other.initialized)
 	{
@@ -294,7 +322,7 @@ auto mempool::base_ptr<T>::optional::operator=(optional&& other) -> optional&
 
 template<typename T>
 template<typename... Args>
-void mempool::base_ptr<T>::optional::construct(Args&&... args)
+void mempool::weak_block_ptr<T>::optional::construct(Args&&... args)
 {
 	assert(!initialized);
 	new (get()) T(std::forward<Args>(args)...);
@@ -302,7 +330,7 @@ void mempool::base_ptr<T>::optional::construct(Args&&... args)
 }
 
 template<typename T>
-void mempool::base_ptr<T>::optional::destruct()
+void mempool::weak_block_ptr<T>::optional::destruct()
 {
 	assert(initialized);
 	(*get()).~T();
@@ -311,26 +339,26 @@ void mempool::base_ptr<T>::optional::destruct()
 
 // need not be initialized
 template<typename T>
-T *mempool::base_ptr<T>::optional::get()
+T *mempool::weak_block_ptr<T>::optional::get()
 {
 	return static_cast<T*>(static_cast<void*>(store));
 }
 
 // need not be initialized
 template<typename T>
-const T *mempool::base_ptr<T>::optional::get() const
+const T *mempool::weak_block_ptr<T>::optional::get() const
 {
 	return static_cast<const T*>(static_cast<const void*>(store));
 }
 
 template<typename T>
-bool mempool::base_ptr<T>::optional::valid() const
+bool mempool::weak_block_ptr<T>::optional::valid() const
 {
 	return initialized;
 }
 
 template<typename T>
-mempool::base_ptr<T>::optional::~optional()
+mempool::weak_block_ptr<T>::optional::~optional()
 {
 	if(initialized)
 		get()->~T();
@@ -338,7 +366,7 @@ mempool::base_ptr<T>::optional::~optional()
 
 template<typename T>
 template<typename... Args>
-auto mempool::base_ptr<T>::fixed_allocator::construct(Args&&... args) -> index_t
+auto mempool::weak_block_ptr<T>::fixed_allocator::construct(Args&&... args) -> index_t
 {
 	index_t i;
 	if(freelist.empty())
@@ -355,18 +383,18 @@ auto mempool::base_ptr<T>::fixed_allocator::construct(Args&&... args) -> index_t
 
 
 template<typename T>
-typename mempool::base_ptr<T>::fixed_allocator
-mempool::base_ptr<T>::fixed_allocator::fixed_allocator::DEFAULT {};
+typename mempool::weak_block_ptr<T>::fixed_allocator
+mempool::weak_block_ptr<T>::fixed_allocator::fixed_allocator::DEFAULT {};
 
 template<typename T>
-void mempool::base_ptr<T>::fixed_allocator::destruct(index_t i)
+void mempool::weak_block_ptr<T>::fixed_allocator::destruct(index_t i)
 {
 	store[i].destruct();
 	freelist.push(i);
 }
 
 template<typename T>
-T& mempool::base_ptr<T>::fixed_allocator::operator[](index_t i)
+T& mempool::weak_block_ptr<T>::fixed_allocator::operator[](index_t i)
 {
 	assert(i < store.size());
 	assert(store[i].valid());
@@ -374,7 +402,7 @@ T& mempool::base_ptr<T>::fixed_allocator::operator[](index_t i)
 }
 
 template<typename T>
-const T& mempool::base_ptr<T>::fixed_allocator::operator[](index_t i) const
+const T& mempool::weak_block_ptr<T>::fixed_allocator::operator[](index_t i) const
 {
 	assert(i < store.size());
 	assert(store[i].valid());
@@ -382,18 +410,18 @@ const T& mempool::base_ptr<T>::fixed_allocator::operator[](index_t i) const
 }
 
 template<typename T>
-std::vector<typename mempool::base_ptr<T>::fixed_allocator>
-mempool::base_ptr<T>::fallocators {};
+std::vector<typename mempool::weak_block_ptr<T>::fixed_allocator>
+mempool::weak_block_ptr<T>::fallocators {};
 
 template<typename T>
-auto mempool::base_ptr<T>::generate_allocator() -> _allocator
+auto mempool::weak_block_ptr<T>::generate_allocator() -> _allocator
 {
 	fallocators.emplace_back();
 	return fallocators.size()-1;
 }
 
 template<typename T>
-auto mempool::base_ptr<T>::default_allocator() -> _allocator
+auto mempool::weak_block_ptr<T>::default_allocator() -> _allocator
 {
 	if(fallocators.empty()) return generate_allocator();
 	return 0;

@@ -39,6 +39,7 @@ void testlists(std::function<T(void)> f)
 {
 	cout << "Comparing stl and my list for type size " << sizeof(T)
 			<< " and " << N << " elements\n";
+	size_t ctr = 0;
 	array<T, N> elements;
 	for(size_t i = 0; i < N; ++i)
 		elements[i] = f();
@@ -59,19 +60,35 @@ void testlists(std::function<T(void)> f)
 	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
 	cout << duration << endl;
 	cout << "\tStl fwd postinc iterate (after warmup): ";
+	ctr = 0;
 	for(auto it = stlist.begin(); it != stlist.end(); ++it)
-		asm("");
+		if(*it != elements[ctr++])
+		{
+			cout << "(!) no match ";
+		}
+	ctr = 0;
 	time = clock();
 	for(auto it = stlist.begin(); it != stlist.end(); ++it)
-		asm("");
+		if(*it != elements[ctr++])
+		{
+			cout << "(!) no match ";
+		}
 	duration = 1000*(std::clock() - time) / (double) CLOCKS_PER_SEC;
 	cout << duration << "ms" << endl;
 	cout << "\tMy fwd postinc iterate (after warmup): ";
+	ctr = 0;
 	for(auto it = mylist.begin(); it != mylist.end(); ++it)
-		asm("");
+		if(*it != elements[ctr++])
+		{
+			cout << "(!) no match ";
+		}
+	ctr = 0;
 	time = clock();
 	for(auto it = mylist.begin(); it != mylist.end(); ++it)
-		asm("");
+		if(*it != elements[ctr++])
+		{
+			cout << "(!) no match ";
+		}
 	duration = 1000*(std::clock() - time) / (double) CLOCKS_PER_SEC;
 	cout << duration << "ms" << endl;
 }
@@ -136,7 +153,6 @@ void bptr_test()
 	cout << "stress tests / comparison to stl list: " << endl;
 	testlists<int, 1000000>([](){return gen();});
 	testlists<double, 1000000>([](){return gen();});
-	testlists<lfu::heap_cache<int,int>,10000 >([](){return lfu::heap_cache<int,int>{};});
 #endif /* NDEBUG */
 }
 
