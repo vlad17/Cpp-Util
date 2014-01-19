@@ -76,38 +76,7 @@ namespace mempool
 	public:
 		typedef index_t _allocator;
 	private:
-		/**
-		 * optional class is inspired by boost::optional<T>, but is simpler and
-		 * does not use factories (which copy arguments for construction).
-		 *
-		 * Allows for explicit construction and destruction of objects.
-		 */
-		class optional
-		{
-		private:
-			bool initialized; // boolean tracks current state (necessary for moving)
-			char store[sizeof(T)]; // store object as a sequence of bytes explicitly
-		public:
-			// Constructors
-			template<typename... Args>
-			optional(Args&&... args);
-			optional(optional&& other);
-			optional(const optional&) = delete;
-			// Assignment operators
-			optional& operator=(const optional&) = delete;
-			optional& operator=(optional&& other);
-			// Explicit construction, destruction
-			template<typename... Args>
-			INLINE void construct(Args&&... args);
-			INLINE void destruct();
-			// Get pointer to location of stored optional object.
-			// Value of T may be undefined if not valid.
-			INLINE T *get();
-			INLINE const T *get() const;
-			// Getter for initialized
-			INLINE bool valid() const;
-			~optional();
-		};
+		typedef implementation_utility::optional<T> optional;
 		/**
 		 * fixed_allocator maintains a contiguous chunk of memory
 		 * and allows for construction of new objects of the same fixed
@@ -117,6 +86,7 @@ namespace mempool
 		class fixed_allocator
 		{
 		private:
+			typedef implementation_utility::optional<T> optional;
 			std::vector<optional> store; // chunk of memory
 			std::queue<index_t> freelist; // list of free entries
 			// Default constructor makes empty everything.
