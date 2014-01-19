@@ -24,7 +24,6 @@
 #include <vector>
 #include <cassert>
 
-// TODO make constructors better...
 
 // defines default not equal operator for two types x and y, for a template
 // type T
@@ -37,8 +36,6 @@
 #define _SWAP_EQ_OPERATOR_(x, y) \
 	template<typename T> INLINE bool operator==(x xarg, y yarg) \
 	{return yarg == xarg;}
-
-// TODO create an index of allocators (?)
 
 // TODO add parallel_fixed_allocator
 // (uses R/W lock, writing for construction if need to reallocate, read otherwise).
@@ -138,7 +135,6 @@ namespace mempool
 			std::queue<index_t> freelist; // list of free entries
 			// Default constructor makes empty everything.
 		public:
-			static fixed_allocator DEFAULT; // default allocator of this type
 			fixed_allocator():
 				store(), freelist() {};
 			// Construct, destruct, access object at index
@@ -155,23 +151,18 @@ namespace mempool
 			fixed_allocator(fixed_allocator&&) = default;
 			virtual ~fixed_allocator() {}
 		};
-		// TODO parallel allocator
 		// If index is valid then allocator must be valid
 		_allocator allocator; // first bit for parallel.
-		// TODO just use index?
-		// TODO just use default?
 		index_t index;
 		static const index_t NULLVAL = -1;
 		static std::vector<fixed_allocator> fallocators;
 		fixed_allocator& alloc() const {return fallocators[allocator];}
-		// TODO bitwise ops here ^^^^
 		// Object-generating Constructors
 		template<typename... Args>
 		weak_block_ptr(_allocator alloci, Args&&... args) :
 			allocator(alloci), index(alloc().construct(std::forward<Args>(args)...)) {}
 		// Access to default allocators
 		static _allocator default_allocator();
-		// parallel TODO
 		// Ability to destruct for derived classes
 		INLINE void safe_destruct() {if(*this != nullptr) alloc().destruct(index);}
 		INLINE void set_null() {index = NULLVAL;}
@@ -250,12 +241,14 @@ namespace mempool
 		typedef typename weak_block_ptr<T>::pointer pointer;
 		typedef typename weak_block_ptr<T>::const_pointer const_pointer;
 		// Object-creating Constructors
+		// Generates with supplied allocator
 		template<typename... Args>
 		block_ptr(_allocator alloc, Args&&... args) :
 			wptr(alloc, std::forward<Args>(args)...) {}
+		// Generates with default allocator
 		template<typename... Args>
-		block_ptr(Args&&... args) :
-			wptr(weak_block_ptr<T>::default_allocator(), std::forward<Args>(args)...) {}
+		INLINE static block_ptr<T> dfl_alloc(Args&&... args)
+		{return block_ptr<T>(weak_block_ptr<T>::default_allocator(), std::forward<Args>(args)...);}
 		// Movement constructors
 		block_ptr() :
 			wptr() {}
@@ -381,11 +374,6 @@ auto mempool::weak_block_ptr<T>::fixed_allocator::construct(Args&&... args) -> i
 	return i;
 }
 
-
-template<typename T>
-typename mempool::weak_block_ptr<T>::fixed_allocator
-mempool::weak_block_ptr<T>::fixed_allocator::fixed_allocator::DEFAULT {};
-
 template<typename T>
 void mempool::weak_block_ptr<T>::fixed_allocator::destruct(index_t i)
 {
@@ -423,7 +411,7 @@ auto mempool::weak_block_ptr<T>::generate_allocator() -> _allocator
 template<typename T>
 auto mempool::weak_block_ptr<T>::default_allocator() -> _allocator
 {
-	if(fallocators.empty()) return generate_allocator();
+	if(fallocators.empty()) generate_allocator();
 	return 0;
 }
 

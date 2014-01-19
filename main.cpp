@@ -97,7 +97,7 @@ void bptr_test()
 {
 	cout << "Block pointer test\n";
 	typedef mempool::block_ptr<pair<int, int> > pointer;
-	pointer ptr = pointer(0,1);
+	pointer ptr = pointer::dfl_alloc(0,1);
 	cout << "Pair (0,1): " << endl;
 	cout << "\tfirst:  " << ptr->first << '\n';
 	cout << "\tsecond: " << ptr->second << '\n';
