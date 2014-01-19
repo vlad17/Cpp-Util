@@ -7,9 +7,7 @@ know and then I'll get to documenting the code and making what needs to be done
 clear.
 
 TODO:
-	fixed_allocator
-	linked list to test fixed_allocator
-	(add allocators to fibheap, heap_cache)
+	array avl tree
 	linked_cache (see lfu_cache.h)
 	exact_heap_cache (see lfu_cache.h)
 	fibheap (check file for TODOs)
