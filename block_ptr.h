@@ -24,6 +24,8 @@
 #include <vector>
 #include <cassert>
 
+#include "impl_util.h"
+
 
 // defines default not equal operator for two types x and y, for a template
 // type T
@@ -53,22 +55,6 @@ namespace mempool
 	 * in time for a given allocator.
 	 */
 	typedef unsigned index_t;
-
-	/*
-	 * easily_copyable class has a public type member type which is
-	 * const T& if T is not integral Cond and T if it is.
-	 */
-	template<typename T>
-	class easily_copyable
-	{
-	private:
-		template<bool B, class E>
-		struct aux { typedef const E& type; };
-		template<class E>
-		struct aux<true, E> { typedef E type; };
-	public:
-		typedef typename aux<std::is_integral<T>::value, T>::type type;
-	};
 
 	template<typename T>
 	class block_ptr;
@@ -173,7 +159,7 @@ namespace mempool
 		// Typeweak_block_ptrdefs
 		typedef T type;
 		typedef T& reference;
-		typedef typename easily_copyable<T>::type const_reference;
+		typedef typename implementation_utility::easily_copyable<T>::type const_reference;
 		typedef T* pointer;
 		typedef const T* const_pointer;
 		// Construction
