@@ -6,8 +6,6 @@
  * Contains some tests for the data structures, prints to stdout.
  */
 
-#define NDEBUG
-
 #include "fibheap.h"
 #include "lfu_cache.h"
 #include "block_ptr.h"

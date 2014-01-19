@@ -10,6 +10,8 @@
 #ifndef IMPL_UTIL_H_
 #define IMPL_UTIL_H_
 
+#include <cassert>
+
 // INLINE will ensure a function is always inlined
 #define INLINE inline __attribute__ ((always_inline))
 
@@ -38,6 +40,9 @@ namespace implementation_utility
 	 * Allows for explicit construction and destruction of objects.
 	 *
 	 * Keeps track of whether or not the object is initialized.
+	 *
+	 * Does not allow for copy capability b/c type may not have implemented copy.
+	 * A workaround is creating a new optional instance with a copy being move-assigned.
 	 */
 	template<typename T>
 	class optional
@@ -47,7 +52,8 @@ namespace implementation_utility
 		char store[sizeof(T)]; // store object as a sequence of bytes explicitly
 	public:
 		// Constructors
-		optional();
+		optional(); // does not default-initialize
+		optional(T&& rval);
 		optional(optional&& other);
 		optional(const optional&) = delete;
 		// Assignment operators
@@ -60,72 +66,14 @@ namespace implementation_utility
 		// Get pointer to location of stored optional object.
 		// Value of T may be undefined if not valid.
 		INLINE T *get() const;
+		INLINE T &access() const;
 		// Getter for initialized
 		INLINE bool valid() const;
 		~optional();
 	};
 }
 
-template<typename T>
-implementation_utility::optional<T>::optional() :
-	initialized(false) {}
-
-template<typename T>
-implementation_utility::optional<T>::optional(optional&& other) :
-	initialized(other.initialized)
-{
-	if(initialized)
-		new (get()) T(std::move(*other.get()));
-}
-
-template<typename T>
-auto implementation_utility::optional<T>::operator=(optional&& other) -> optional&
-{
-	if(other.initialized)
-	{
-		if(initialized) destruct();
-		new (get()) T(std::move(*other.get()));
-		initialized = true;
-	}
-	return *this;
-}
-
-template<typename T>
-template<typename... Args>
-void implementation_utility::optional<T>::construct(Args&&... args)
-{
-	assert(!initialized);
-	new (get()) T(std::forward<Args>(args)...);
-	initialized = true;
-}
-
-template<typename T>
-void implementation_utility::optional<T>::destruct()
-{
-	assert(initialized);
-	(*get()).~T();
-	initialized = false;
-}
-
-// need not be initialized
-template<typename T>
-T *implementation_utility::optional<T>::get() const
-{
-	return static_cast<T*>(static_cast<void*>(const_cast<char*>(store)));
-}
-
-template<typename T>
-bool implementation_utility::optional<T>::valid() const
-{
-	return initialized;
-}
-
-template<typename T>
-implementation_utility::optional<T>::~optional()
-{
-	if(initialized)
-		get()->~T();
-}
+#include "impl_util.tpp"
 
 #endif /* IMPL_UTIL_H_ */
 
