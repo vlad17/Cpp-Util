@@ -8,6 +8,7 @@ clear.
 
 TODO:
 	array avl tree
+	document block_ptr.h
 	linked_cache (see lfu_cache.h)
 	exact_heap_cache (see lfu_cache.h)
 	fibheap (check file for TODOs)
