@@ -10,6 +10,7 @@
 #include "lfu_cache.h"
 #include "block_ptr.h"
 #include "blist.h"
+#include "balance.h"
 
 #include <iostream>
 #include <random>
@@ -19,17 +20,66 @@
 #include <ctime>
 #include <functional>
 
+// TODO fix bug for bptr
+
+// TODO for all types: try custom move-only, copy-only.
+// For stable_bset try no move, no copy type
+
 using namespace std;
 
 const int SEED = 0;
 minstd_rand0 gen(SEED);
 
-void cache_test(), fibheap_test(), bptr_test();
+void cache_test(), fibheap_test(), bptr_test(), bset_test();
 
 int main()
 {
-	bptr_test();
+	bset_test();
 	return 0;
+}
+
+void bset_test()
+{
+	cout << "Testing stable_bset\n" << endl;
+	cout << "Unit testing with integers" << endl;
+	stable_bset<int> set;
+	cout << "Empty start:" << endl;
+	cout << set << endl;
+	cout << "Empty? " << set.empty() <<  " Has 0: " << set.find(0) <<
+			" Has 1: " << set.find(1) << endl;
+
+	cout << "Add 1" << endl;
+	set.insert(1);
+	cout << set << endl;
+	cout << "Empty? " << set.empty() <<  " Has 0: " << set.find(0) <<
+			" Has 1: " << set.find(1) << endl;
+
+	cout << "Add 0" << endl;
+	set.insert(0);
+	cout << set << endl;
+	cout << "Empty? " << set.empty() <<  " Has 0: " << set.find(0) <<
+			" Has 1: " << set.find(1) << endl;
+
+	cout << "Attempt add 1 succeed: " << set.insert(1) <<
+			" Attempt add 0 succeed: " << set.insert(0) << endl;
+
+	cout << "Add 2-9" << endl;
+	for(int i = 2; i < 10; ++i)
+	{
+		set.insert(i);
+		cout << set << endl;
+	}
+	cout << "Has 5? " << set.find(5) << endl;
+
+	cout << "Clear" << endl;
+	set.clear();
+	cout << set << endl;
+	cout << "Empty? " << set.empty() << endl;;
+
+	cout << "Add random 1-100 x20" << endl;
+	for(int i = 0; i < 20; ++i)
+		set.insert(gen()%100);
+	cout << set << endl;
 }
 
 template<typename T, size_t N>

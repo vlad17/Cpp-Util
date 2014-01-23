@@ -12,16 +12,27 @@
 
 #include <cassert>
 
+// TODO document
+
 // INLINE will ensure a function is always inlined
 #define INLINE inline __attribute__ ((always_inline))
 
 namespace implementation_utility
 {
+	template<typename T1, typename T2>
+	struct template_or
+	{
+		static const bool value = T1::value || T2::value;
+	};
+
 	/*
 	 * easily_copyable class has a public type member type which is
-	 * const T& if T is not integral and T if it is.
+	 * const T& if not Condition::value and T if it is.
+	 *
+	 * Default condition is if the type is integral or a pointer
 	 */
-	template<typename T, typename Condition = std::is_integral<T>>
+	template<typename T, typename Condition =
+			template_or<std::is_integral<T>, std::is_pointer<T> > >
 	class easily_copyable
 	{
 	private:
