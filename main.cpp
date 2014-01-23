@@ -76,10 +76,14 @@ void bset_test()
 	cout << set << endl;
 	cout << "Empty? " << set.empty() << endl;;
 
-	cout << "Add random 1-100 x20" << endl;
-	for(int i = 0; i < 20; ++i)
-		set.insert(gen()%100);
-	cout << set << endl;
+	cout << "Add random 1-100 x30" << endl;
+	for(int i = 0; i < 30; ++i)
+	{
+		int j = gen()%100;
+		if(!set.insert(j))
+			cout << "\tdup: " << j;
+	}
+	cout << '\n' << set << endl;
 }
 
 template<typename T, size_t N>

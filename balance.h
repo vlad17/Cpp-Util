@@ -13,7 +13,10 @@
  *
  * This allows for locality of reference and the memory.
  *
- * One drawback of the balance tree is the frequent moves.
+ * One drawback of the balance tree is the frequent moves: in order to maintain
+ * binary tree property through swaps, the algorithms need
+ * to update swapped nodes, which may take O(log n) swaps. Then, in general,
+ * insert/delete have O((log n)^2) worst case time, for O(log n) swapped nodes.
  */
 
 #ifndef BALANCE_H_
@@ -60,8 +63,10 @@ private:
 	// Node struct
 	struct node
 	{
+	private:
 		T val;
 		meta m;
+	public:
 		// Constructor/Destructor
 		node(cref_type val) :
 			val(val), m() {}
@@ -75,6 +80,7 @@ private:
 		INLINE node *set_left(node* n) {return m.left = n;}
 		INLINE node *set_right(node* n) {return m.right = n;}
 		INLINE size_type set_size(size_type s) {return m.size = s;}
+		INLINE void increment() {++m.size;}
 		// Getters
 		INLINE const meta& metadata() const {return m;}
 		INLINE node *parent() const {return m.parent;}
@@ -191,7 +197,7 @@ template<typename T, typename C>
 auto stable_bset<T,C>::node_equal(cref_type val, node *n) const -> bool
 {
 	assert(n != nullptr);
-	return !compare(val, n->val) && !compare(n->val, val);
+	return !compare(val, n->value()) && !compare(n->value(), val);
 }
 
 // swims (swaps) until restored property
@@ -201,10 +207,10 @@ auto stable_bset<T,C>::node_swim(node *n) -> void
 	assert(n != nullptr);
 	node *lchild = n->left();
 	node *rchild = n->right();
-	if(lchild != nullptr && compare(n->value(), lchild->val))
+	if(lchild != nullptr && compare(n->value(), lchild->value()))
 		node_swap(lchild, n);
 	// Note that the following ELSE is what makes this logarithmic in time
-	else if(rchild != nullptr && compare(rchild->val, n->val))
+	else if(rchild != nullptr && compare(rchild->value(), n->value()))
 		node_swap(rchild, n);
 	else return;
 	node_swim(n); // if did not return need to keep swimming
@@ -226,24 +232,24 @@ auto stable_bset<T,C>::_consistency_check() const -> void
 		assert(visited.insert(top).second); // should not have been there before
 		bfsq.pop();
 		size_type sum = 1;
-		if(top->m.left)
+		if(top->left())
 		{
-			bfsq.push(top->m.left);
+			bfsq.push(top->left());
 			// Check order, parenthood.
-			assert(compare(top->m.left->val, top->val));
-			assert(top->m.left->m.parent == top);
-			sum+=top->m.left->m.size;
+			assert(compare(top->left()->value(), top->value()));
+			assert(top->left()->parent() == top);
+			sum+=top->left()->size();
 		}
-		if(top->m.right)
+		if(top->right())
 		{
-			bfsq.push(top->m.right);
+			bfsq.push(top->right());
 			// Check order, parenthood.
-			assert(compare(top->val, top->m.right->val));
-			assert(top->m.right->m.parent == top);
-			sum+=top->m.right->m.size;
+			assert(compare(top->value(), top->right()->value()));
+			assert(top->right()->parent() == top);
+			sum+=top->right()->size();
 		}
 		// Check size
-		assert(top->m.size == sum);
+		assert(top->size() == sum);
 	}
 	assert(visited.size() == size());
 #endif /* NDEBUG */
@@ -265,11 +271,11 @@ auto stable_bset<T,C>::_print_tree(std::ostream& o) const -> void
 		bfsq.pop();
 		if(top != nullptr)
 		{
-			if(top->m.left) bfsq.push(top->m.left);
-			if(top->m.right) bfsq.push(top->m.right);
-			o << top->val << '(';
+			if(top->left()) bfsq.push(top->left());
+			if(top->right()) bfsq.push(top->right());
+			o << top->value() << '(';
 			if(top == root) o << "-";
-			else o << top->m.parent->val;
+			else o << top->parent()->value();
 		 	o << ") ";
 		}
 		else if(!bfsq.empty())
@@ -297,10 +303,10 @@ auto stable_bset<T,C>::find_helper(cref_type val, node *n) const -> bool
 		return false;
 	if(node_equal(val, n))
 		return true;
-	if(compare(val, n->val))
-		return find_helper(val, n->m.left);
+	if(compare(val, n->value()))
+		return find_helper(val, n->left());
 	else
-		return find_helper(val, n->m.right);
+		return find_helper(val, n->right());
 }
 
 template<typename T, typename C>
@@ -308,29 +314,29 @@ auto stable_bset<T,C>::insert_helper(node *free, node *n) -> void
 {
 	assert(free != nullptr);
 	assert(n != nullptr);
-	assert(!node_equal(free->val, n));
-	++n->m.size;
+	assert(!node_equal(free->value(), n));
+	n->increment();
 	// free < n ?
-	if(compare(free->val, n->val))
+	if(compare(free->value(), n->value()))
 	{
 		// Can always add to size 0 subtree
-		if(n->m.left == nullptr)
+		if(n->left() == nullptr)
 			n->set_left(free)->set_parent(n);
 		// Immediate swap case - set n as right.
-		else if(n->m.right == nullptr)
+		else if(n->right() == nullptr)
 		{
 			node_swap(free, n);
 			free->set_right(n)->set_parent(free);
 			node_swim(free);
 		}
 		// Can always add to less than or equal subtree
-		else if(n->m.left->m.size <= n->m.right->m.size)
-			insert_helper(free, n->m.left);
+		else if(n->left()->size() <= n->right()->size())
+			insert_helper(free, n->left());
 		// Swap case: left subtree is larger. Swap w/ n and send down right.
 		else
 		{
 			node_swap(free, n);
-			insert_helper(n, free->m.right);
+			insert_helper(n, free->right());
 			// Left child may be greater than free, swap nodes until tree property restored.
 			node_swim(free);
 		}
@@ -338,23 +344,23 @@ auto stable_bset<T,C>::insert_helper(node *free, node *n) -> void
 	else
 	{
 		// Can always add to size 0 subtree
-		if(n->m.right == nullptr)
+		if(n->right() == nullptr)
 			n->set_right(free)->set_parent(n);
 		// Immediate swap case - set n as left.
-		else if(n->m.left == nullptr)
+		else if(n->left() == nullptr)
 		{
 			node_swap(free, n);
 			free->set_left(n)->set_parent(free);
 			node_swim(free);
 		}
 		// Can always add to less than or equal subtree
-		else if(n->m.right->m.size <= n->m.left->m.size)
-			insert_helper(free, n->m.right);
+		else if(n->right()->size() <= n->left()->size())
+			insert_helper(free, n->right());
 		// Swap case: right subtree is larger. Swap w/ n and send down left.
 		else
 		{
 			node_swap(free, n);
-			insert_helper(n, free->m.left);
+			insert_helper(n, free->left());
 			// Right child may be less than free, swap nodes until tree property restored.
 			node_swim(free);
 		}
@@ -366,7 +372,7 @@ auto stable_bset<T,C>::insert_helper(node *free, node *n) -> void
 template<typename T, typename C>
 auto stable_bset<T,C>::size() const -> size_type
 {
-	return root == nullptr? 0 : root->m.size;
+	return root == nullptr? 0 : root->size();
 }
 
 template<typename T, typename C>
