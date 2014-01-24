@@ -17,6 +17,8 @@
  * binary tree property through swaps, the algorithms need
  * to update swapped nodes, which may take O(log n) swaps. Then, in general,
  * insert/delete have O((log n)^2) worst case time, for O(log n) swapped nodes.
+ *
+ * Note that the stable_bset cannot swap values (allowing for the stability)
  */
 
 #ifndef BALANCE_H_
@@ -36,6 +38,8 @@
 // TODO make like set (make an iterator)
 // TODO add sorted elements constructor (method?)
 
+// TODO faster algorithm?
+
 /*
  * Set implementation using a balance tree, uses pointers to nodes
  * instead of an array with heap indices. In this implementation T need not
@@ -52,6 +56,11 @@ public:
 	typedef Compare key_comp;
 private:
 	struct node;
+	/* Important structural note: the first member in meta, node,
+	* and stable_bset must be a size_type, and in a bset it must have the value -1.
+	* This allows for identification between the structures (which allows for lighter
+	* iterator types).
+	*/
 	// Meta info for node
 	struct meta
 	{
@@ -64,8 +73,8 @@ private:
 	struct node
 	{
 	private:
-		T val;
 		meta m;
+		T val;
 	public:
 		// Constructor/Destructor
 		node(cref_type val) :
@@ -80,7 +89,6 @@ private:
 		INLINE node *set_left(node* n) {return m.left = n;}
 		INLINE node *set_right(node* n) {return m.right = n;}
 		INLINE size_type set_size(size_type s) {return m.size = s;}
-		INLINE void increment() {++m.size;}
 		// Getters
 		INLINE const meta& metadata() const {return m;}
 		INLINE node *parent() const {return m.parent;}
@@ -104,8 +112,10 @@ private:
 	template<typename T2, typename C2>
 	friend std::ostream& operator<<(std::ostream& o, const stable_bset<T2,C2>& bset);
 	// Tree algorithms
-	bool find_helper(cref_type val, node *n) const; // accepts nullptr
+	node *find_helper(cref_type val, node *n) const; // accepts nullptr
 	void insert_helper(node *free, node *n);
+	void erase_node(node *n);
+	void erase_helper(node *n, node *intree);
 public:
 	// Constructor
 	stable_bset() :
@@ -117,6 +127,7 @@ public:
 	void clear();
 	bool find(cref_type val) const; // true if and only if there
 	bool insert(cref_type val); // true if inserted
+	size_type erase(cref_type val);
 };
 
 template<typename T, typename C>
@@ -297,12 +308,12 @@ std::ostream& operator<<(std::ostream& o, const stable_bset<T,C>& bset)
 // ----- Tree algorithms
 
 template<typename T, typename C>
-auto stable_bset<T,C>::find_helper(cref_type val, node *n) const -> bool
+auto stable_bset<T,C>::find_helper(cref_type val, node *n) const -> node*
 {
 	if(n == nullptr)
-		return false;
+		return nullptr;
 	if(node_equal(val, n))
-		return true;
+		return n;
 	if(compare(val, n->value()))
 		return find_helper(val, n->left());
 	else
@@ -315,7 +326,7 @@ auto stable_bset<T,C>::insert_helper(node *free, node *n) -> void
 	assert(free != nullptr);
 	assert(n != nullptr);
 	assert(!node_equal(free->value(), n));
-	n->increment();
+	n->set_size(n->size()+1);
 	// free < n ?
 	if(compare(free->value(), n->value()))
 	{
@@ -367,6 +378,41 @@ auto stable_bset<T,C>::insert_helper(node *free, node *n) -> void
 	}
 }
 
+template<typename T, typename C>
+auto stable_bset<T,C>::erase_node(node *n) -> void
+{
+	// Find in-tree replacement
+	node *replacement = nullptr;
+	if(n->left() == nullptr)
+		replacement = successor(n); // todo needs to decrement sizes as it goes along (including n)
+	else if(n->right() == nullptr)
+		replacement = predecessor(n);
+	else
+		replacement = n->left()->size < n->right()->size? successor(n) : predecessor(n);
+	// If no replacement just remove
+	if(replacement)
+		node_swap(replacement, n)
+	node_cut(n);
+}
+
+template<typename T, typename C>
+auto stable_bset<T,C>::erase_helper(node *n, node *intree) -> void
+{
+	assert(intree != nullptr);
+	assert(n != nullptr);
+	// Base case, found.
+	if(intree == n)
+	{
+
+	}
+	// Recursive cases. Decrement size, maintain tree property, continue.
+	intree->set_size(n->size()-1);
+	if(compare(n->value(), intree->value))
+	{
+		if(n->left() == nullptr)
+	}
+}
+
 // ----- Public methods
 
 template<typename T, typename C>
@@ -413,7 +459,18 @@ auto stable_bset<T,C>::insert(cref_type val) -> bool
 	return true;
 }
 
-
+template<typename T, typename C>
+auto stable_bset<T,C>::erase(cref_type val) -> size_type
+{
+	_consistency_check();
+	if(root == nullptr)
+		return 0;
+	node *n = find_helper(val, root);
+	if(n == nullptr)
+		return 0;
+	erase_node(n);
+	return 1;
+}
 
 // ----- Array/movable version
 
