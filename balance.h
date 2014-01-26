@@ -114,8 +114,8 @@ private:
 	// Tree algorithms
 	node *find_helper(cref_type val, node *n) const; // accepts nullptr
 	void insert_helper(node *free, node *n);
-	void erase_node(node *n);
-	void erase_helper(node *n, node *intree);
+		// Descend tree decrementing size and replacing
+	void erase_helper(node *erase, node *current);
 public:
 	// Constructor
 	stable_bset() :
@@ -379,37 +379,54 @@ auto stable_bset<T,C>::insert_helper(node *free, node *n) -> void
 }
 
 template<typename T, typename C>
-auto stable_bset<T,C>::erase_node(node *n) -> void
+auto stable_bset<T,C>::erase_helper(node *erase, node *current) -> void
 {
-	// Find in-tree replacement
-	node *replacement = nullptr;
-	if(n->left() == nullptr)
-		replacement = successor(n); // todo needs to decrement sizes as it goes along (including n)
-	else if(n->right() == nullptr)
-		replacement = predecessor(n);
-	else
-		replacement = n->left()->size < n->right()->size? successor(n) : predecessor(n);
-	// If no replacement just remove
-	if(replacement)
-		node_swap(replacement, n)
-	node_cut(n);
-}
-
-template<typename T, typename C>
-auto stable_bset<T,C>::erase_helper(node *n, node *intree) -> void
-{
-	assert(intree != nullptr);
-	assert(n != nullptr);
-	// Base case, found.
-	if(intree == n)
+	assert(erase != nullptr);
+	assert(current != nullptr);
+	current->set_size(current->size()-1);
+	if(erase == current)
 	{
-
+		node *left, *right;
+		// push node down to leaf of largest subtree
+		while((left = current->left()) || (right = current->right()))
+		{
+			if(left && right)
+				node_swap(current, left->size() > right->size()? left : right);
+			else if(left)
+				node_swap(current, left);
+			else
+				node_swap(current, right);
+			current->set_size(current->size()-1);
+		}
+		assert(current->left() == nullptr && current->right() == nullptr);
+		node *parent = current->parent();
+		if(parent->right() == current)
+			parent->set_right(nullptr);
+		else
+			parent->set_left(nullptr);
+		delete current;
 	}
-	// Recursive cases. Decrement size, maintain tree property, continue.
-	intree->set_size(n->size()-1);
-	if(compare(n->value(), intree->value))
+	else
 	{
-		if(n->left() == nullptr)
+		node *left = current->left(), *right = current->right();
+		if(compare(erase->value(), current->value()))
+		{
+			// need to compensate removal?
+			if(left->size() < right->size())
+			{
+				// todo
+			}
+			erase_helper(erase, left);
+		}
+		else
+		{
+			// need to compensate removal?
+			if(left->size() < right->size())
+			{
+				// todo
+			}
+			erase_helper(erase, right);
+		}
 	}
 }
 
@@ -468,7 +485,7 @@ auto stable_bset<T,C>::erase(cref_type val) -> size_type
 	node *n = find_helper(val, root);
 	if(n == nullptr)
 		return 0;
-	erase_node(n);
+	erase_helper(n, root);
 	return 1;
 }
 
