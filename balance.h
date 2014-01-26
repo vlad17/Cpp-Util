@@ -36,6 +36,9 @@
 
 // TODO document
 // TODO make like set (make an iterator)
+	// for iterator just hold a pointer to current node
+	// (make it a union of a pointer to node and pointer to list (differentiate by
+ 	// accessing identity member - -1 for lists, size for nodes)
 // TODO add sorted elements constructor (method?)
 
 // TODO faster algorithm?
@@ -80,7 +83,6 @@ private:
 		node(cref_type val) :
 			val(val), m() {}
 		~node() {delete m.left; delete m.right;}
-		// TODO rval ref construnodector and insert for set
 		// Tree ops
 		bool null() const; // disconnected?
 		// Setters
@@ -115,7 +117,10 @@ private:
 	node *find_helper(cref_type val, node *n) const; // accepts nullptr
 	void insert_helper(node *free, node *n);
 		// Descend tree decrementing size and replacing
-	void erase_helper(node *erase, node *current);
+	void erase_helper(node *erase, node *current, node *replacement);
+	void push_out(node *n);
+	node *predecessor(node *n);
+	node *successor(node *n);
 public:
 	// Constructor
 	stable_bset() :
@@ -144,8 +149,6 @@ auto stable_bset<T,C>::node::null() const -> bool
 		m.right == nullptr;
 }
 
-// TODO getters/setters everywhere below here
-
 template<typename T, typename C>
 auto stable_bset<T,C>::node_link_immediate(node *n) -> void
 {
@@ -168,6 +171,7 @@ auto stable_bset<T,C>::node_swap(node *n1, node *n2) -> void
 {
 	assert(n1 != nullptr);
 	assert(n2 != nullptr);
+	if(n1 == n2) return;
 	// If any node is not in tree, or the nodes are far enough apart
 	if(n1->null() || n2->null() ||
 			(n1->parent() != n2 && n1->right() != n2 && n1->left() != n2))
@@ -225,6 +229,49 @@ auto stable_bset<T,C>::node_swim(node *n) -> void
 		node_swap(rchild, n);
 	else return;
 	node_swim(n); // if did not return need to keep swimming
+}
+
+// removes them
+template<typename T, typename C>
+auto stable_bset<T,C>::predecessor(node *n) -> node*
+{
+	assert(n != nullptr);
+	assert(n->left() != nullptr);
+	n = n->left();
+	while(n->right())
+	{
+		n->set_size(n->size()-1);
+		n = n->right();
+	}
+	if(n->left()) // can only have 1 child
+	{
+		node *child = n->left();
+		child->set_parent(nullptr);
+		n->set_left(nullptr);
+		node_swap(child, n);
+	}
+	return n;
+}
+
+template<typename T, typename C>
+auto stable_bset<T,C>::successor(node *n) -> node*
+{
+	assert(n != nullptr);
+	assert(n->right() != nullptr);
+	n = n->right();
+	while(n->left())
+	{
+		n->set_size(n->size()-1);
+		n = n->left();
+	}
+	if(n->right()) // can only have 1 child
+	{
+		node *child = n->right();
+		child->set_parent(nullptr);
+		n->set_right(nullptr);
+		node_swap(child, n);
+	}
+	return n;
 }
 
 // ----- Consistency and printing
@@ -378,55 +425,73 @@ auto stable_bset<T,C>::insert_helper(node *free, node *n) -> void
 	}
 }
 
+// pushes node n down to a leaf position and then deletes it
 template<typename T, typename C>
-auto stable_bset<T,C>::erase_helper(node *erase, node *current) -> void
+auto stable_bset<T,C>::push_out(node *n) -> void
+{
+	node *left, *right;
+	// push node down to leaf of largest subtree
+	while((left = n->left()) || (right = n->right()))
+	{
+		n->set_size(n->size()-1);
+		if(left && right)
+			node_swap(n, left->size() > right->size()? left : right);
+		else if(left)
+			node_swap(n, left);
+		else
+			node_swap(n, right);
+	}
+	assert(n->left() == nullptr && n->right() == nullptr);
+	node *parent = n->parent();
+	if(parent->right() == n)
+		parent->set_right(nullptr);
+	else
+		parent->set_left(nullptr);
+	delete n;
+}
+
+template<typename T, typename C>
+auto stable_bset<T,C>::erase_helper(node *erase, node *current, node *replacement) -> void
 {
 	assert(erase != nullptr);
 	assert(current != nullptr);
 	current->set_size(current->size()-1);
 	if(erase == current)
 	{
-		node *left, *right;
-		// push node down to leaf of largest subtree
-		while((left = current->left()) || (right = current->right()))
-		{
-			if(left && right)
-				node_swap(current, left->size() > right->size()? left : right);
-			else if(left)
-				node_swap(current, left);
-			else
-				node_swap(current, right);
-			current->set_size(current->size()-1);
-		}
-		assert(current->left() == nullptr && current->right() == nullptr);
-		node *parent = current->parent();
-		if(parent->right() == current)
-			parent->set_right(nullptr);
+		if(replacement == nullptr)
+			push_out(erase);
 		else
-			parent->set_left(nullptr);
-		delete current;
+		{
+			node_swap(erase, replacement);
+			node_swim(replacement);
+			delete erase;
+		}
 	}
 	else
 	{
-		node *left = current->left(), *right = current->right();
+		node *left = current->left(), *right = current->right(), *next;
 		if(compare(erase->value(), current->value()))
 		{
 			// need to compensate removal?
-			if(left->size() < right->size())
+			if(replacement == nullptr && left->size() < right->size())
 			{
-				// todo
+				node_swap(current, successor(current));
+				replacement = current;
 			}
-			erase_helper(erase, left);
+			next = left;
 		}
 		else
 		{
 			// need to compensate removal?
-			if(left->size() < right->size())
+			if(replacement == nullptr && right->size() < left->size())
 			{
-				// todo
+				node_swap(current, predecessor(current));
+				replacement = current;
 			}
-			erase_helper(erase, right);
+			next = right;
 		}
+		node_swap(replacement, current);
+		erase_helper(erase, next, current);
 	}
 }
 
@@ -485,7 +550,7 @@ auto stable_bset<T,C>::erase(cref_type val) -> size_type
 	node *n = find_helper(val, root);
 	if(n == nullptr)
 		return 0;
-	erase_helper(n, root);
+	erase_helper(n, root, erase);
 	return 1;
 }
 
