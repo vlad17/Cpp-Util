@@ -30,60 +30,11 @@ using namespace std;
 const int SEED = 0;
 minstd_rand0 gen(SEED);
 
-void cache_test(), fibheap_test(), bptr_test(), bset_test();
+void cache_test(), fibheap_test(), bptr_test();
 
 int main()
 {
-	bset_test();
 	return 0;
-}
-
-void bset_test()
-{
-	cout << "Testing stable_bset\n" << endl;
-	cout << "Unit testing with integers" << endl;
-	stable_bset<int> set;
-	cout << "Empty start:" << endl;
-	cout << set << endl;
-	cout << "Empty? " << set.empty() <<  " Has 0: " << set.find(0) <<
-			" Has 1: " << set.find(1) << endl;
-
-	cout << "Add 1" << endl;
-	set.insert(1);
-	cout << set << endl;
-	cout << "Empty? " << set.empty() <<  " Has 0: " << set.find(0) <<
-			" Has 1: " << set.find(1) << endl;
-
-	cout << "Add 0" << endl;
-	set.insert(0);
-	cout << set << endl;
-	cout << "Empty? " << set.empty() <<  " Has 0: " << set.find(0) <<
-			" Has 1: " << set.find(1) << endl;
-
-	cout << "Attempt add 1 succeed: " << set.insert(1) <<
-			" Attempt add 0 succeed: " << set.insert(0) << endl;
-
-	cout << "Add 2-9" << endl;
-	for(int i = 2; i < 10; ++i)
-	{
-		set.insert(i);
-		cout << set << endl;
-	}
-	cout << "Has 5? " << set.find(5) << endl;
-
-	cout << "Clear" << endl;
-	set.clear();
-	cout << set << endl;
-	cout << "Empty? " << set.empty() << endl;;
-
-	cout << "Add random 1-100 x30" << endl;
-	for(int i = 0; i < 30; ++i)
-	{
-		int j = gen()%100;
-		if(!set.insert(j))
-			cout << "\tdup: " << j;
-	}
-	cout << '\n' << set << endl;
 }
 
 template<typename T, size_t N>
