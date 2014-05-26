@@ -1,15 +1,13 @@
 /*
  * Vladimir Feinberg
  * main.cpp
- * 2014-01-18
+ * 2014-05-26
  *
  * Contains some tests for the data structures, prints to stdout.
  */
 
 #include "fibheap.h"
 #include "lfu_cache.h"
-#include "block_ptr.h"
-#include "blist.h"
 
 #include <iostream>
 #include <random>
@@ -29,134 +27,12 @@ using namespace std;
 const int SEED = 0;
 minstd_rand0 gen(SEED);
 
-void cache_test(), fibheap_test(), bptr_test();
+void cache_test(), fibheap_test();
 
 int main()
 {
 	cache_test();
 	return 0;
-}
-
-template<typename T, size_t N>
-void testlists(std::function<T(void)> f)
-{
-	cout << "Comparing stl and my list for type size " << sizeof(T)
-			<< " and " << N << " elements\n";
-	size_t ctr = 0;
-	array<T, N> elements;
-	for(size_t i = 0; i < N; ++i)
-		elements[i] = f();
-	blist<T> mylist;
-	list<T>  stlist;
-	clock_t time;
-	double duration;
-	cout << "\tStl emplace_back: ";
-	time = clock();
-	for(auto& i : elements)
-		stlist.emplace_back(i);
-	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
-	cout << duration << endl;
-	cout << "\tMy emplace_back: ";
-	time = clock();
-	for(auto& i : elements)
-		mylist.emplace_back(i);
-	duration = (std::clock() - time) / (double) CLOCKS_PER_SEC;
-	cout << duration << endl;
-	cout << "\tStl fwd postinc iterate (after warmup): ";
-	ctr = 0;
-	for(auto it = stlist.begin(); it != stlist.end(); ++it)
-		if(*it != elements[ctr++])
-		{
-			cout << "(!) no match ";
-		}
-	ctr = 0;
-	time = clock();
-	for(auto it = stlist.begin(); it != stlist.end(); ++it)
-		if(*it != elements[ctr++])
-		{
-			cout << "(!) no match ";
-		}
-	duration = 1000*(std::clock() - time) / (double) CLOCKS_PER_SEC;
-	cout << duration << "ms" << endl;
-	cout << "\tMy fwd postinc iterate (after warmup): ";
-	ctr = 0;
-	for(auto it = mylist.begin(); it != mylist.end(); ++it)
-		if(*it != elements[ctr++])
-		{
-			cout << "(!) no match ";
-		}
-	ctr = 0;
-	time = clock();
-	for(auto it = mylist.begin(); it != mylist.end(); ++it)
-		if(*it != elements[ctr++])
-		{
-			cout << "(!) no match ";
-		}
-	duration = 1000*(std::clock() - time) / (double) CLOCKS_PER_SEC;
-	cout << duration << "ms" << endl;
-}
-
-void bptr_test()
-{
-	cout << "Block pointer test\n";
-	typedef mempool::block_ptr<pair<int, int> > pointer;
-	pointer ptr = pointer::dfl_alloc(0,1);
-	cout << "Pair (0,1): " << endl;
-	cout << "\tfirst:  " << ptr->first << '\n';
-	cout << "\tsecond: " << ptr->second << '\n';
-	cout << "Change to (-1, 2)\n";
-	ptr->first--;
-	ptr->second++;
-	cout << "\t(" << (*ptr).first << "," << (*ptr).second << ")" << endl;
-	cout << "Change ownership\n";
-	auto ptrcpy = move(ptr);
-	cout << "\tnew: (" << ptrcpy->first << "," << ptrcpy->second << ")" << endl;
-	mempool::weak_block_ptr<pointer::type> wptr(ptrcpy);
-	cout << "Create weak copy" << endl;
-	cout << "\tstrong: (" << ptrcpy->first << "," << ptrcpy->second << ")" << endl;
-	cout << "\tcopy: (" << wptr->first << "," << wptr->second << ")" << endl;
-	cout << "cref: " << is_reference<pointer::const_reference>::value << endl;
-	cout << "Block list test\n";
-
-	blist<int> blocklist;
-	cout << "empty block list" << endl;
-	cout << blocklist << endl;
-	cout << "fill front 1..10" << endl;
-	for(int i = 1; i <= 10; ++i)
-		blocklist.emplace_front(i);
-	cout << blocklist << endl;
-	cout << "clear" << endl;
-	blocklist.clear();
-	cout << blocklist << endl;
-	cout << "fill back 1..10" << endl;
-	for(int i = 1; i <= 10; ++i)
-		blocklist.emplace_back(i);
-	cout << blocklist << endl;
-	cout << "clear" << endl;
-	blocklist.clear();
-	cout << blocklist << endl;
-	cout << "fill back -1..7" << endl;
-	for(int i = -1; i <= 7; ++i)
-		blocklist.emplace_back(i);
-	cout << blocklist << endl;
-	cout << "pop_front twice" << endl;
-	blocklist.pop_front();
-	blocklist.pop_front();
-	cout << blocklist << endl;
-	cout << "pop_back twice" << endl;
-	blocklist.pop_back();
-	blocklist.pop_back();
-	cout << blocklist << endl;
-	cout << "fill front 1..5" << endl;
-	for(int i = 1; i <= 5; ++i)
-		blocklist.emplace_front(i);
-	cout << blocklist << endl;
-	// TODO move construct, copy construct.
-#ifdef NDEBUG
-	cout << "stress tests / comparison to stl list: " << endl;
-	testlists<int, 1000000>([](){return gen();});
-	testlists<double, 1000000>([](){return gen();});
-#endif /* NDEBUG */
 }
 
 void cache_test()
