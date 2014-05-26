@@ -20,7 +20,6 @@ namespace util
 	template<typename Iterator>
 	class iterable;
 
-	// todo below needed?
 	template<typename T>
 	auto as_iterator(T& t) -> iterable<decltype(t.begin())>;
 

@@ -53,16 +53,15 @@ namespace lfu
 		{
 			typedef typename cache<Key, Value, Pred>::kv_type kv_type;
 			citem(kv_type&& kv, size_t loc) :
-				key(std::move(kv.first)), val(std::move(kv.second)),
-				loc(loc), count(0) {}
+				kv(std::forward<kv_type>(kv)), loc(loc), count(0) {}
 			citem(const kv_type& kv, size_t loc) :
-				key(kv.first), val(kv.second), loc(loc), count(0) {}
-			Key key;
-			Value val;
+				kv(kv), loc(loc), count(0) {}
+			kv_type kv;
 			size_t loc;
 			size_t count;
-			const kv_type& kvpair() const
-			{return *reinterpret_cast<const kv_type*>(&key);}
+			const kv_type& kvpair() const {return kv;}
+			const Key& key() const {return kv.first;}
+			Value *val() const {return const_cast<Value*>(&kv.second);}
 		};
 		// Maintains mapping from key to citem
 		mutable std::unordered_map<Key, citem*, Hash, Pred> keymap;
@@ -174,6 +173,7 @@ namespace lfu
 		 */
 		static hasher hash_function() {return hashf;}
 	};
+
 
 	// TODO exact_heap_cache (min ordered at top, always removes exactly
 	// LFU)

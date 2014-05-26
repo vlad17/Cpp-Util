@@ -31,7 +31,7 @@ auto lfu::heap_cache<K,V,P,H>::operator=(const heap_cache& other) -> heap_cache&
 		auto i = *it;
 		heap.push_back(new citem(i->kvpair(), i->loc));
 		heap.back()->count = i->count;
-		keymap.insert(std::make_pair(heap.back()->key, heap.back()));
+		keymap.insert(std::make_pair(heap.back()->key(), heap.back()));
 	}
 	return *this;
 }
@@ -65,7 +65,7 @@ bool lfu::heap_cache<K,V,P,H>::insert(const kv_type& kv)
 	_consistency_check();
 	if(max_size == 0) return false;
 	citem *valp = new citem(kv, heap.size());
-	citem *mapped = keymap[valp->key];
+	citem *mapped = keymap[valp->key()];
 	if(mapped != nullptr)
 	{
 		delete valp;
@@ -76,7 +76,7 @@ bool lfu::heap_cache<K,V,P,H>::insert(const kv_type& kv)
 		_del_back_full();
 		valp->loc = heap.size();
 	}
-	keymap[valp->key] = valp;
+	keymap[valp->key()] = valp;
 	heap.push_back(valp);
 	return true;
 }
@@ -87,7 +87,7 @@ bool lfu::heap_cache<K,V,P,H>::insert(kv_type&& kv)
 	_consistency_check();
 	if(max_size == 0) return false;
 	citem *valp = new citem(std::forward<kv_type>(kv), heap.size());
-	citem *mapped = keymap[valp->key];
+	citem *mapped = keymap[valp->key()];
 	if(mapped != nullptr)
 	{
 		delete valp;
@@ -98,7 +98,7 @@ bool lfu::heap_cache<K,V,P,H>::insert(kv_type&& kv)
 		_del_back_full();
 		valp->loc = heap.size();
 	}
-	keymap[valp->key] = valp;
+	keymap[valp->key()] = valp;
 	heap.push_back(valp);
 	return true;
 }
@@ -117,7 +117,7 @@ auto lfu::heap_cache<K,V,P,H>::lookup(const key_type& key) const -> value_type*
 	if(access == keymap.end()) return nullptr;
 	++access->second->count;
 	increase_key(access->second);
-	return &access->second->val;
+	return access->second->val();
 }
 
 template<typename K, typename V, typename P, typename H>
@@ -146,7 +146,7 @@ template<typename K, typename V, typename P, typename H>
 void lfu::heap_cache<K,V,P,H>::_del_back()
 {
 	assert(heap.size() > 1);
-	keymap.erase(heap.back()->key);
+	keymap.erase(heap.back()->key());
 	delete heap.back();
 	heap.pop_back();
 }
@@ -211,7 +211,7 @@ void lfu::heap_cache<K,V,P,H>::_print_cache(std::ostream& o) const
 		for(size_t j = pow(2, i); j <= pow(2, i+1)-1; ++j)
 		{
 			if(j > keymap.size()) break;
-			o << '(' << heap[j]->key << "->" << heap[j]->val << ',';
+			o << '(' << heap[j]->key() << "->" << heap[j]->val() << ',';
 			o << heap[j]->count << ") ";
 		}
 		o << '\n';

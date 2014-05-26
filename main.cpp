@@ -13,14 +13,12 @@
 #include <random>
 #include <array>
 #include <list>
-#include <numeric>
-#include <ctime>
-#include <functional>
-
-// TODO fix bug for bptr
 
 // TODO for all types: try custom move-only, copy-only.
 // For stable_bset try no move, no copy type
+#include <numeric>
+#include <chrono>
+#include <functional>
 
 using namespace std;
 
@@ -103,7 +101,8 @@ void cache_test()
 		auto ptrtest = lhc2.lookup(test);
 		if(ptrtest != nullptr && *ptrtest != test)
 				cout << "\tError: value " << test << " not matched with key" << endl;
-		lhc2.insert(make_pair(test,test));
+		if(ptrtest == nullptr)
+			lhc2.insert(make_pair(test,test));
 	}
 	cout << "...Completed" << endl;
 #endif /* NDEBUG */
