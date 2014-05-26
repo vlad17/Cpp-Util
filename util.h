@@ -41,7 +41,7 @@ namespace util
 	template<typename T>
 	auto as_iterator(T& t) -> iterable<decltype(t.begin())>
 	{
-		return iterable(t.begin(), t.end());
+		return iterable<decltype(t.begin())>(t.begin(), t.end());
 	}
 
 	// Pointer comparison

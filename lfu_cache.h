@@ -17,6 +17,7 @@
 #include <cassert>
 #include <algorithm>
 
+#include "util.h"
 #include "cache.h"
 
 namespace lfu
@@ -38,6 +39,8 @@ namespace lfu
 	 * Value - value type - type key maps to. Copied/moved once.
 	 * Pred - equal-to predicate for keys
 	 * Hash - hash for keys.
+	 *
+	 * Two copies of the key will be kept, one in the heap and one in the hash.
 	 */
 	template<typename Key, typename Value, typename Pred = std::equal_to<Key>,
 		typename Hash = std::hash<Key> >
@@ -51,22 +54,20 @@ namespace lfu
 		// access between the heap and lookup map.
 		struct citem
 		{
-			typedef typename cache<Key, Value, Pred>::kv_type kv_type;
-			citem(kv_type&& kv, size_t loc) :
-				kv(std::forward<kv_type>(kv)), loc(loc), count(0) {}
-			citem(const kv_type& kv, size_t loc) :
-				kv(kv), loc(loc), count(0) {}
-			kv_type kv;
+			citem(Value&& val, size_t loc) :
+				val(std::forward<Value>(val)), loc(loc), count(0) {}
+			citem(const Value& val, size_t loc) :
+				val(val), loc(loc), count(0) {}
+			citem(citem&& c) = default;
+			citem(const citem& c) = default;
+			mutable Value val;
 			size_t loc;
 			size_t count;
-			const kv_type& kvpair() const {return kv;}
-			const Key& key() const {return kv.first;}
-			Value *val() const {return const_cast<Value*>(&kv.second);}
 		};
 		// Maintains mapping from key to citem
-		mutable std::unordered_map<Key, citem*, Hash, Pred> keymap;
+		mutable std::unordered_map<Key, citem, Hash, Pred> keymap;
 		// Heap keeps a priority-queue like structure
-		mutable std::vector<citem*> heap;
+		mutable std::vector<Key> heap;
 		// Hash function
 		static Hash hashf;
 		// Maximum size of cache.
@@ -77,7 +78,7 @@ namespace lfu
 		// Pop REFRESH_RATIO citems off
 		void _del_back_full();
 		// Increase citem to restore heap property
-		void increase_key(citem *c) const;
+		void increase_key(typename util::scref<Key>::type k) const;
 		// Check invariants
 		void _consistency_check() const;
 		// Prints debug info
@@ -99,7 +100,7 @@ namespace lfu
 		 * Generates an empty heap_cache with specified max size.
 		 */
 		heap_cache(size_t max = -1):
-			 keymap(), heap(), max_size(max) {heap.push_back(nullptr);}
+			 keymap(), heap(), max_size(max) {heap.push_back(Key());}
 		/*
 		 * INPUT:
 		 * const heap_cache& other - heap cache to copy from
@@ -117,7 +118,7 @@ namespace lfu
 		 */
 		heap_cache(heap_cache&& other) :
 			heap_cache(1) {*this = std::forward<heap_cache>(other);}
-		virtual ~heap_cache();
+		virtual ~heap_cache() {}
 
 		// Methods
 		/*
@@ -146,13 +147,13 @@ namespace lfu
 		 */
 		heap_cache& operator=(heap_cache&& other);
 		// See cache.h for documentation of virtual functions
-		virtual bool empty() const;
-		virtual size_t size() const;
-		virtual size_t get_max_size() const;
+		virtual bool empty() const {return keymap.empty();}
+		virtual size_t size() const {return keymap.size();}
+		virtual size_t get_max_size() const {return max_size;}
 		virtual bool insert(const kv_type& kv);
 		virtual bool insert(kv_type&& kv);
-		virtual bool contains(const key_type& key) const;
-		virtual value_type *lookup(const key_type& key) const;
+		virtual bool contains(const Key& key) const {return keymap.find(key) != keymap.end();}
+		virtual value_type *lookup(const Key& key) const;
 		virtual void clear();
 		/*
 		 * INPUT:

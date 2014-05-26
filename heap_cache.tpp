@@ -1,22 +1,10 @@
 /*
 * Vladimir Feinberg
-* 2013-12-02
+* 2014-05-26
 * heap_cache.tpp
 *
 * Contains implementation of lfu_cache.h's heap_cache methods.
 */
-
-template<typename K, typename V, typename P, typename H>
-lfu::heap_cache<K,V,P,H>::~heap_cache()
-{	
-	for(auto i : heap) delete i;
-}
-
-template<typename K, typename V, typename P, typename H>
-size_t lfu::heap_cache<K,V,P,H>::get_max_size() const
-{
-	return max_size;
-}
 
 template<typename K, typename V, typename P, typename H>
 auto lfu::heap_cache<K,V,P,H>::operator=(const heap_cache& other) -> heap_cache&
@@ -25,14 +13,8 @@ auto lfu::heap_cache<K,V,P,H>::operator=(const heap_cache& other) -> heap_cache&
 	clear();
 	if(other.empty()) return *this;
 	max_size = other.max_size;
-	heap.reserve(other.heap.size());
-	for(auto it = ++other.heap.begin(); it != other.heap.end(); ++it)
-	{
-		auto i = *it;
-		heap.push_back(new citem(i->kvpair(), i->loc));
-		heap.back()->count = i->count;
-		keymap.insert(std::make_pair(heap.back()->key(), heap.back()));
-	}
+	heap = other.heap;
+	keymap = other.keymap;
 	return *this;
 }
 
@@ -48,36 +30,22 @@ auto lfu::heap_cache<K,V,P,H>::operator=(heap_cache&& other) -> heap_cache&
 }
 
 template<typename K, typename V, typename P, typename H>
-bool lfu::heap_cache<K,V,P,H>::empty() const
-{
-	return keymap.empty();
-}
-
-template<typename K, typename V, typename P, typename H>
-auto lfu::heap_cache<K,V,P,H>::size() const -> size_t
-{
-	return keymap.size();
-}
-
-template<typename K, typename V, typename P, typename H>
 bool lfu::heap_cache<K,V,P,H>::insert(const kv_type& kv)
 {
 	_consistency_check();
 	if(max_size == 0) return false;
-	citem *valp = new citem(kv, heap.size());
-	citem *mapped = keymap[valp->key()];
-	if(mapped != nullptr)
-	{
-		delete valp;
-		return false;
-	}
+	auto itpair = keymap.emplace(std::piecewise_construct,
+      std::tuple<key_type>(kv.first),
+      std::tuple<value_type, size_t>(kv.second, heap.size()));
+	if(!itpair.second) return false;
+	auto it = itpair.first;
+	citem& item = it->second;
 	if(keymap.size() == max_size)
 	{
 		_del_back_full();
-		valp->loc = heap.size();
+		item.loc = heap.size();
 	}
-	keymap[valp->key()] = valp;
-	heap.push_back(valp);
+	heap.push_back(kv.first);
 	return true;
 }
 
@@ -86,48 +54,40 @@ bool lfu::heap_cache<K,V,P,H>::insert(kv_type&& kv)
 {
 	_consistency_check();
 	if(max_size == 0) return false;
-	citem *valp = new citem(std::forward<kv_type>(kv), heap.size());
-	citem *mapped = keymap[valp->key()];
-	if(mapped != nullptr)
-	{
-		delete valp;
-		return false;
-	}
+	auto itpair = keymap.emplace(std::piecewise_construct,
+      std::forward_as_tuple<key_type>(std::forward<key_type>(kv.first)),
+      std::forward_as_tuple<value_type, size_t>(std::forward<value_type>(kv.second),
+      		heap.size()));
+	if(!itpair.second) return false;
+	auto it = itpair.first;
+	citem& item = it->second;
 	if(keymap.size() == max_size)
 	{
 		_del_back_full();
-		valp->loc = heap.size();
+		item.loc = heap.size();
 	}
-	keymap[valp->key()] = valp;
-	heap.push_back(valp);
+	heap.push_back(it->first);
 	return true;
 }
 
 template<typename K, typename V, typename P, typename H>
-bool lfu::heap_cache<K,V,P,H>::contains(const key_type& key) const
-{
-	return keymap.find(key) != keymap.end();
-}
-
-template<typename K, typename V, typename P, typename H>
-auto lfu::heap_cache<K,V,P,H>::lookup(const key_type& key) const -> value_type*
+auto lfu::heap_cache<K,V,P,H>::lookup(const K& key) const -> value_type*
 {
 	_consistency_check();
-	auto access = keymap.find(key);
-	if(access == keymap.end()) return nullptr;
-	++access->second->count;
-	increase_key(access->second);
-	return access->second->val();
+	auto it = keymap.find(key);
+	if(it == keymap.end()) return nullptr;
+	++it->second.count;
+	increase_key(it->first);
+	return &it->second.val;
 }
 
 template<typename K, typename V, typename P, typename H>
 void lfu::heap_cache<K,V,P,H>::clear()
 {
 	_consistency_check();
-	for(auto i : heap) delete i;
 	heap.clear();
 	keymap.clear();
-	heap.push_back(nullptr);
+	heap.push_back(key_type{});
 }
 
 template<typename K, typename V, typename P, typename H>
@@ -146,8 +106,7 @@ template<typename K, typename V, typename P, typename H>
 void lfu::heap_cache<K,V,P,H>::_del_back()
 {
 	assert(heap.size() > 1);
-	keymap.erase(heap.back()->key());
-	delete heap.back();
+	keymap.erase(heap.back());
 	heap.pop_back();
 }
 
@@ -164,21 +123,21 @@ void lfu::heap_cache<K,V,P,H>::_del_back_full()
 
 // swaps increased key until heap property is restored, returns
 template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::increase_key(citem *c) const
+void lfu::heap_cache<K,V,P,H>::increase_key(typename util::scref<K>::type k) const
 {
-	assert(c != nullptr);
-	assert(c->loc < heap.size());
-	assert(c->loc > 0);
-	if(c->loc == 1) return;
-	citem *parent = heap[c->loc/2];
-	assert(parent != nullptr);
-	if(parent->count < c->count)
+	citem& c = keymap.at(k);
+	assert(c.loc < heap.size());
+	assert(c.loc > 0);
+	while(c.loc > 1)
 	{
-		heap[parent->loc] = c;
-		heap[c->loc] = parent;
-		parent->loc = c->loc;
-		c->loc/=2;
-		increase_key(c);
+		auto pkey = heap[c.loc/2];
+		citem& parent = keymap.at(pkey);
+		if(parent.count >= c.count) break;
+		heap[parent.loc] = k;
+		heap[c.loc] = pkey;
+		auto tmp = parent.loc;
+		parent.loc = c.loc;
+		c.loc = tmp;
 	}
 }
 
@@ -189,7 +148,7 @@ void lfu::heap_cache<K,V,P,H>::_consistency_check() const
 	assert(max_size >= heap.size()-1);
 	assert(max_size >= keymap.size());
 	assert(keymap.size() + 1 == heap.size());
-	assert(heap[0] == nullptr);
+	assert(this->key_eq()(heap[0], key_type{}));
 #ifdef HCACHE_CHECK
 	for(size_t i = keymap.size(); i > 1; --i)
 	{
@@ -211,8 +170,8 @@ void lfu::heap_cache<K,V,P,H>::_print_cache(std::ostream& o) const
 		for(size_t j = pow(2, i); j <= pow(2, i+1)-1; ++j)
 		{
 			if(j > keymap.size()) break;
-			o << '(' << heap[j]->key() << "->" << heap[j]->val() << ',';
-			o << heap[j]->count << ") ";
+			o << '(' << heap[j] << "->" << keymap.at(heap[j]).val << ',';
+			o << keymap.at(heap[j]).count << ") ";
 		}
 		o << '\n';
 	}
