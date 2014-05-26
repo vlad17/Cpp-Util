@@ -55,7 +55,7 @@ public:
 	 * const kv_type& kv - key-value pair
 	 * PRECONDITION:
 	 * BEHAVIOR:
-	 * Inserts (key, value) into hash. May remove older, less frequently used
+	 * Inserts (key, value) into cache. May remove older, less frequently used
 	 * members from cache. If another object is present with the same key,
 	 * it is replaced.
 	 * RETURN:
@@ -68,7 +68,7 @@ public:
 	 * kv_type&& kv - key-value pair
 	 * PRECONDITION:
 	 * BEHAVIOR:
-	 * Inserts (key, value) into hash. May remove older, less frequently used
+	 * Inserts (key, value) into cache. May remove older, less frequently used
 	 * members from cache. If another object is present with the same key,
 	 * it is replaced.
 	 * RETURN:

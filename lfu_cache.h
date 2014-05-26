@@ -118,11 +118,6 @@ namespace lfu
 		 */
 		heap_cache(heap_cache&& other) :
 			heap_cache(1) {*this = std::forward<heap_cache>(other);}
-		/*
-		 * INPUT:
-		 * BEHAVIOR:
-		 * Destroys cache, deallocating all owned memory.
-		 */
 		virtual ~heap_cache();
 
 		// Methods
@@ -151,85 +146,14 @@ namespace lfu
 		 * Reference to this.
 		 */
 		heap_cache& operator=(heap_cache&& other);
-		/*
-		 * INPUT:
-		 * PRECONDITION:
-		 * BEHAVIOR:
-		 * RETURN:
-		 * Whether the cache is empty
-		 */
+		// See cache.h for documentation of virtual functions
 		virtual bool empty() const;
-		/*
-		 * INPUT:
-		 * PRECONDITION:
-		 * BEHAVIOR:
-		 * RETURN:
-		 * Current (not maximum) size of cache
-		 */
 		virtual size_t size() const;
-		/*
-		 * INPUT:
-		 * PRECONDITION:
-		 * BEHAVIOR:
-		 * RETURN:
-		 * Maximum size of cache
-		 */
 		virtual size_t get_max_size() const;
-		/*
-		 * INPUT:
-		 * const kv_type& kv - key-value pair
-		 * PRECONDITION:
-		 * BEHAVIOR:
-		 * Inserts (key, value) into hash. May remove older, less frequently used
-		 * members from cache. If another object is present with the same key,
-		 * it is replaced.
-		 * RETURN:
-		 * True if an object of the same key is present (replacement occurred), or
-		 * false otherwise.
-		 */
 		virtual bool insert(const kv_type& kv);
-		/*
-		 * INPUT:
-		 * kv_type&& kv - key-value pair
-		 * PRECONDITION:
-		 * BEHAVIOR:
-		 * Inserts (key, value) into hash. May remove older, less frequently used
-		 * members from cache. If another object is present with the same key,
-		 * it is replaced.
-		 * RETURN:
-		 * False if an object of the same key is present (replacement occurred), or
-		 * true otherwise.
-		 */
 		virtual bool insert(kv_type&& kv);
-		/*
-		 * INPUT:
-		 * const key_type& key - key to look up
-		 * PRECONDITION:
-		 * BEHAVIOR:
-		 * RETURN:
-		 * Whether cache contains a certain key
-		 */
 		virtual bool contains(const key_type& key) const;
-		/*
-		 * INPUT:
-		 * const key_type& key
-		 * PRECONDITION:
-		 * BEHAVIOR:
-		 * Increases the lookup count for the key and changes associated
-		 * internal structure to prioritize retention of the key.
-		 * RETURN:
-		 * Pointer to associated value for key or nullptr if key is not
-		 * mapped to a value currently in the cache.
-		 */
 		virtual value_type *lookup(const key_type& key) const;
-		/*
-		 * INPUT:
-		 * PRECONDITION:
-		 * BEHAVIOR:
-		 * Clears cache completely, removing all items and setting size to
-		 * 0. Maximum size is kept the same.
-		 * RETURN:
-		 */
 		virtual void clear();
 		/*
 		 * INPUT:

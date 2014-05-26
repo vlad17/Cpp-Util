@@ -2,16 +2,10 @@ Cpp-Util
 
 This is a collection of some data structures I have been working on recently.
 
-If you're interested in contributing, that would be pretty cool - let me
-know and then I'll get to documenting the code and making what needs to be done
-clear.
-
 TODO:
-	array avl tree
-	debug block_ptr.h for complex data types
-	document block_ptr.h
 	linked_cache (see lfu_cache.h)
 	exact_heap_cache (see lfu_cache.h)
 	fibheap (check file for TODOs)
+	concurrent caches (is it possible? need R/W lock but even "reads" adjust counts)
 	valgrind check everything
 	

@@ -10,7 +10,6 @@
 #include "lfu_cache.h"
 #include "block_ptr.h"
 #include "blist.h"
-#include "balance.h"
 
 #include <iostream>
 #include <random>
@@ -34,6 +33,7 @@ void cache_test(), fibheap_test(), bptr_test();
 
 int main()
 {
+	cache_test();
 	return 0;
 }
 
