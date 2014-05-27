@@ -12,28 +12,16 @@
 #include "util.h"
 
 template<typename Key, typename Value, typename Pred = std::equal_to<Key> >
-struct dfl_cache_traits
+class cache
 {
+public:
+	// Public typedefs
 	typedef Key key_type;
 	typedef typename util::scref<Key>::type key_cref;
 	typedef Value value_type;
 	typedef Pred key_equal;
 	typedef std::pair<Key, Value> kv_type;
 	typedef size_t size_type;
-};
-
-template<typename Key, typename Value, typename Pred = std::equal_to<Key>,
-		typename Traits = dfl_cache_traits<Key, Value, Pred> >
-class cache
-{
-public:
-	// Public typedefs
-	typedef typename Traits::key_type key_type;
-	typedef typename Traits::value_type value_type;
-	typedef typename Traits::key_equal key_equal;
-	typedef typename Traits::kv_type kv_type;
-	typedef typename Traits::key_cref key_cref;
-	typedef typename Traits::size_type size_type;
 
 	// Destructor (does nothing)
 	virtual ~cache() {};
@@ -126,8 +114,8 @@ public:
 	 * Prints cache's contents to parameter ostream.
 	 * RETURN:
 	 */
-	template<typename K, typename V, typename P, typename T>
-	friend std::ostream& operator<<(std::ostream&, const cache<K,V,P,T>&);
+	template<typename K, typename V, typename P>
+	friend std::ostream& operator<<(std::ostream&, const cache<K,V,P>&);
 protected:
 	cache() {};
 	virtual void _print_cache(std::ostream& o) const;
@@ -144,18 +132,18 @@ protected:
  * RETURN:
  * Original ostream
  */
-template<typename K, typename V, typename P, typename T>
-std::ostream& operator<<(std::ostream& o, const cache<K,V,P,T>& cache)
+template<typename K, typename V, typename P>
+std::ostream& operator<<(std::ostream& o, const cache<K,V,P>& cache)
 {
 	cache._print_cache(o);
 	return o;
 }
 
-template<typename K, typename V, typename P, typename T>
-typename cache<K,V,P,T>::key_equal cache<K,V,P,T>::key_predicate {};
+template<typename K, typename V, typename P>
+typename cache<K,V,P>::key_equal cache<K,V,P>::key_predicate {};
 
-template<typename K, typename V, typename P, typename T>
-void cache<K,V,P,T>::_print_cache(std::ostream& o) const
+template<typename K, typename V, typename P>
+void cache<K,V,P>::_print_cache(std::ostream& o) const
 {
 	o << "cache @ " << this << ", size " << size() << '\n';
 }

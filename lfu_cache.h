@@ -21,11 +21,8 @@
 
 namespace lfu
 {
-	template<typename Key, typename Value, typename Pred, typename Less, typename Hash>
-	struct dfl_heap_cache_traits : public dfl_cache_traits<Key, Value, Pred>
+	struct heap_cache_traits
 	{
-		typedef Hash hasher;
-		typedef Less key_compare;
 		typedef size_t count_type;
 	};
 
@@ -46,38 +43,49 @@ namespace lfu
 	 * Value - value type - type key maps to. Copied/moved once.
 	 * Pred - equal-to predicate for keys
 	 * Hash - hash for keys.
+	 * Traits - counting type trait
 	 *
 	 * Two copies of the key will be kept, one in the heap and one in the hash.
 	 */
-	template<typename Key, typename Value, typename Pred = std::equal_to<Key>, typename Less = std::less<Key>,
-		typename Hash = std::hash<Key>, typename Traits = dfl_heap_cache_traits<Key, Value, Pred, Less, Hash> >
-	class heap_cache : public cache<Key, Value, Pred, Traits>
+	template<typename Key, typename Value, typename Pred = std::equal_to<Key>,
+		typename Hash = std::hash<Key>, typename Traits = heap_cache_traits>
+	class heap_cache : public cache<Key, Value, Pred>
 	{
+	public:
+		// Public typedefs
+		typedef cache<Key, Value, Pred> base_type;
+		typedef typename base_type::key_type key_type;
+		typedef typename base_type::value_type value_type;
+		typedef typename base_type::key_equal key_equal;
+		typedef typename base_type::kv_type kv_type;
+		typedef typename base_type::key_cref key_cref;
+		typedef typename base_type::size_type size_type;
+		typedef Hash hasher;
+		typedef typename Traits::count_type count_type;
 	private:
-		typedef cache<Key, Value, Pred, Traits> base_type;
 		// REFRESH_RATIO is ratio of cache that remains on lookup-triggered refresh.
 		static constexpr double REFRESH_RATIO = 0.5;
+		// Hash function
+		static hasher hashf;
 		// An item is a key-value pair, location in heap, and count
 		// Maintining all the information in one place allows two-way
 		// access between the heap and lookup map.
 		struct citem
 		{
-			citem(Value&& val, size_t loc) :
-				val(std::forward<Value>(val)), loc(loc), count(0) {}
-			citem(const Value& val, size_t loc) :
+			citem(value_type&& val, size_t loc) :
+				val(std::forward<value_type>(val)), loc(loc), count(0) {}
+			citem(const value_type& val, size_t loc) :
 				val(val), loc(loc), count(0) {}
 			citem(citem&& c) = default;
 			citem(const citem& c) = default;
-			mutable Value val;
-			typename Traits::size_type loc;
+			mutable value_type val;
+			size_t loc;
 			typename Traits::count_type count;
 		};
 		// Maintains mapping from key to citem
-		mutable std::unordered_map<Key, citem, Hash, Pred> keymap;
+		mutable std::unordered_map<key_type, citem, hasher, key_equal> keymap;
 		// Heap keeps a priority-queue like structure
-		mutable std::vector<Key> heap;
-		// Hash function
-		static const Hash hashf;
+		mutable std::vector<key_type> heap;
 		// Maximum size of cache.
 		size_t max_size;
 		// Pop back item from heap. Most likely to be recent, and infrequently
@@ -89,19 +97,11 @@ namespace lfu
 		void _consistency_check() const;
 		// Prints debug info
 		void _print_cache(std::ostream& o) const;
-	protected:
 		// Increase citem to restore heap property
-		virtual void increase_key(typename util::scref<Key>::type k) const;
+		void increase_key(key_cref k) const;
+	protected:
+		virtual void update_key(key_cref k) const {increase_key(k);}
 	public:
-		// Public typedefs
-		typedef typename Traits::key_type key_type;
-		typedef typename Traits::value_type value_type;
-		typedef typename Traits::key_equal key_equal;
-		typedef typename Traits::kv_type kv_type;
-		typedef typename Traits::key_cref key_cref;
-		typedef typename Traits::size_type size_type;
-		typedef typename Traits::hasher hasher;
-		typedef typename Traits::key_compare key_compare;
 
 		// Constructors/Destructor
 		/*
@@ -185,7 +185,6 @@ namespace lfu
 		 */
 		static hasher hash_function() {return hashf;}
 	};
-
 
 	// TODO exact_heap_cache (min ordered at top, always removes exactly
 	// LFU)
