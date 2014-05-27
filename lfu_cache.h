@@ -17,11 +17,18 @@
 #include <cassert>
 #include <algorithm>
 
-#include "util.h"
 #include "cache.h"
 
 namespace lfu
 {
+	template<typename Key, typename Value, typename Pred, typename Less, typename Hash>
+	struct dfl_heap_cache_traits : public dfl_cache_traits<Key, Value, Pred>
+	{
+		typedef Hash hasher;
+		typedef Less key_compare;
+		typedef size_t count_type;
+	};
+
 	/*
 	 * A heap_cache is a type which acts as an approximate least frequently used
 	 * (lfu) container. The cache, when set to have a maximum size, will fill up
@@ -42,11 +49,12 @@ namespace lfu
 	 *
 	 * Two copies of the key will be kept, one in the heap and one in the hash.
 	 */
-	template<typename Key, typename Value, typename Pred = std::equal_to<Key>,
-		typename Hash = std::hash<Key> >
-	class heap_cache : public cache<Key, Value, Pred>
+	template<typename Key, typename Value, typename Pred = std::equal_to<Key>, typename Less = std::less<Key>,
+		typename Hash = std::hash<Key>, typename Traits = dfl_heap_cache_traits<Key, Value, Pred, Less, Hash> >
+	class heap_cache : public cache<Key, Value, Pred, Traits>
 	{
 	private:
+		typedef cache<Key, Value, Pred, Traits> base_type;
 		// REFRESH_RATIO is ratio of cache that remains on lookup-triggered refresh.
 		static constexpr double REFRESH_RATIO = 0.5;
 		// An item is a key-value pair, location in heap, and count
@@ -61,15 +69,15 @@ namespace lfu
 			citem(citem&& c) = default;
 			citem(const citem& c) = default;
 			mutable Value val;
-			size_t loc;
-			size_t count;
+			typename Traits::size_type loc;
+			typename Traits::count_type count;
 		};
 		// Maintains mapping from key to citem
 		mutable std::unordered_map<Key, citem, Hash, Pred> keymap;
 		// Heap keeps a priority-queue like structure
 		mutable std::vector<Key> heap;
 		// Hash function
-		static Hash hashf;
+		static const Hash hashf;
 		// Maximum size of cache.
 		size_t max_size;
 		// Pop back item from heap. Most likely to be recent, and infrequently
@@ -77,20 +85,23 @@ namespace lfu
 		void _del_back();
 		// Pop REFRESH_RATIO citems off
 		void _del_back_full();
-		// Increase citem to restore heap property
-		void increase_key(typename util::scref<Key>::type k) const;
 		// Check invariants
 		void _consistency_check() const;
 		// Prints debug info
 		void _print_cache(std::ostream& o) const;
+	protected:
+		// Increase citem to restore heap property
+		virtual void increase_key(typename util::scref<Key>::type k) const;
 	public:
 		// Public typedefs
-		typedef cache<Key, Value, Pred> base_type;
-		typedef typename base_type::key_type key_type;
-		typedef typename base_type::value_type value_type;
-		typedef typename base_type::key_equal key_equal;
-		typedef typename base_type::kv_type kv_type;
-		typedef Hash hasher;
+		typedef typename Traits::key_type key_type;
+		typedef typename Traits::value_type value_type;
+		typedef typename Traits::key_equal key_equal;
+		typedef typename Traits::kv_type kv_type;
+		typedef typename Traits::key_cref key_cref;
+		typedef typename Traits::size_type size_type;
+		typedef typename Traits::hasher hasher;
+		typedef typename Traits::key_compare key_compare;
 
 		// Constructors/Destructor
 		/*
@@ -148,12 +159,12 @@ namespace lfu
 		heap_cache& operator=(heap_cache&& other);
 		// See cache.h for documentation of virtual functions
 		virtual bool empty() const {return keymap.empty();}
-		virtual size_t size() const {return keymap.size();}
-		virtual size_t get_max_size() const {return max_size;}
+		virtual size_type size() const {return keymap.size();}
+		virtual size_type get_max_size() const {return max_size;}
 		virtual bool insert(const kv_type& kv);
 		virtual bool insert(kv_type&& kv);
-		virtual bool contains(const Key& key) const {return keymap.find(key) != keymap.end();}
-		virtual value_type *lookup(const Key& key) const;
+		virtual bool contains(key_cref key) const {return keymap.find(key) != keymap.end();}
+		virtual value_type *lookup(key_cref key) const;
 		virtual void clear();
 		/*
 		 * INPUT:

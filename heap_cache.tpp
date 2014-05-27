@@ -6,8 +6,8 @@
 * Contains implementation of lfu_cache.h's heap_cache methods.
 */
 
-template<typename K, typename V, typename P, typename H>
-auto lfu::heap_cache<K,V,P,H>::operator=(const heap_cache& other) -> heap_cache&
+template<typename K, typename V, typename P, typename L,  typename H, typename S>
+auto lfu::heap_cache<K,V,P,L,H,S>::operator=(const heap_cache& other) -> heap_cache&
 {
 	if(this == &other) return *this;
 	clear();
@@ -18,8 +18,8 @@ auto lfu::heap_cache<K,V,P,H>::operator=(const heap_cache& other) -> heap_cache&
 	return *this;
 }
 
-template<typename K, typename V, typename P, typename H>
-auto lfu::heap_cache<K,V,P,H>::operator=(heap_cache&& other) -> heap_cache&
+template<typename K, typename V, typename P, typename L,  typename H, typename S>
+auto lfu::heap_cache<K,V,P,L,H,S>::operator=(heap_cache&& other) -> heap_cache&
 {
 	assert(this != &other);
 	clear();
@@ -29,8 +29,8 @@ auto lfu::heap_cache<K,V,P,H>::operator=(heap_cache&& other) -> heap_cache&
 	return *this;
 }
 
-template<typename K, typename V, typename P, typename H>
-bool lfu::heap_cache<K,V,P,H>::insert(const kv_type& kv)
+template<typename K, typename V, typename P, typename L,  typename H, typename S>
+bool lfu::heap_cache<K,V,P,L,H,S>::insert(const kv_type& kv)
 {
 	_consistency_check();
 	if(max_size == 0) return false;
@@ -49,8 +49,8 @@ bool lfu::heap_cache<K,V,P,H>::insert(const kv_type& kv)
 	return true;
 }
 
-template<typename K, typename V, typename P, typename H>
-bool lfu::heap_cache<K,V,P,H>::insert(kv_type&& kv)
+template<typename K, typename V, typename P, typename L,  typename H, typename S>
+bool lfu::heap_cache<K,V,P,L,H,S>::insert(kv_type&& kv)
 {
 	_consistency_check();
 	if(max_size == 0) return false;
@@ -70,8 +70,8 @@ bool lfu::heap_cache<K,V,P,H>::insert(kv_type&& kv)
 	return true;
 }
 
-template<typename K, typename V, typename P, typename H>
-auto lfu::heap_cache<K,V,P,H>::lookup(const K& key) const -> value_type*
+template<typename K, typename V, typename P, typename L,  typename H, typename S>
+auto lfu::heap_cache<K,V,P,L,H,S>::lookup(key_cref key) const -> value_type*
 {
 	_consistency_check();
 	auto it = keymap.find(key);
@@ -81,8 +81,8 @@ auto lfu::heap_cache<K,V,P,H>::lookup(const K& key) const -> value_type*
 	return &it->second.val;
 }
 
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::clear()
+template<typename K, typename V, typename P, typename L,  typename H, typename S>
+void lfu::heap_cache<K,V,P,L,H,S>::clear()
 {
 	_consistency_check();
 	heap.clear();
@@ -90,8 +90,8 @@ void lfu::heap_cache<K,V,P,H>::clear()
 	heap.push_back(key_type{});
 }
 
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::set_max_size(size_t max)
+template<typename K, typename V, typename P, typename L,  typename H, typename S>
+void lfu::heap_cache<K,V,P,L,H,S>::set_max_size(size_t max)
 {
 	_consistency_check();
 	max_size = max;
@@ -102,28 +102,27 @@ void lfu::heap_cache<K,V,P,H>::set_max_size(size_t max)
 
 // ---- helper methods
 
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::_del_back()
+template<typename K, typename V, typename P, typename L,  typename H, typename S>
+void lfu::heap_cache<K,V,P,L,H,S>::_del_back()
 {
 	assert(heap.size() > 1);
 	keymap.erase(heap.back());
 	heap.pop_back();
 }
 
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::_del_back_full()
+template<typename K, typename V, typename P, typename L,  typename H, typename S>
+void lfu::heap_cache<K,V,P,L,H,S>::_del_back_full()
 {
 	// below 4 it's not worth it
 	if(max_size <= 4) _del_back();
 	else
-		for(size_t i = static_cast<size_t>(max_size*REFRESH_RATIO);
-			i < max_size; ++i)
+		for(size_t i = static_cast<size_t>(max_size*REFRESH_RATIO); i < max_size; ++i)
 			_del_back();
 }
 
 // swaps increased key until heap property is restored, returns
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::increase_key(typename util::scref<K>::type k) const
+template<typename K, typename V, typename P, typename L,  typename H, typename S>
+void lfu::heap_cache<K,V,P,L,H,S>::increase_key(typename util::scref<K>::type k) const
 {
 	citem& c = keymap.at(k);
 	assert(c.loc < heap.size());
@@ -141,14 +140,14 @@ void lfu::heap_cache<K,V,P,H>::increase_key(typename util::scref<K>::type k) con
 	}
 }
 
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::_consistency_check() const
+template<typename K, typename V, typename P, typename L,  typename H, typename S>
+void lfu::heap_cache<K,V,P,L,H,S>::_consistency_check() const
 {
 	assert(heap.size() >= 1);
 	assert(max_size >= heap.size()-1);
 	assert(max_size >= keymap.size());
 	assert(keymap.size() + 1 == heap.size());
-	assert(this->key_eq()(heap[0], key_type{}));
+	assert(base_type::key_predicate(heap[0], key_type{}));
 #ifdef HCACHE_CHECK
 	for(size_t i = keymap.size(); i > 1; --i)
 	{
@@ -159,8 +158,8 @@ void lfu::heap_cache<K,V,P,H>::_consistency_check() const
 #endif
 }
 
-template<typename K, typename V, typename P, typename H>
-void lfu::heap_cache<K,V,P,H>::_print_cache(std::ostream& o) const
+template<typename K, typename V, typename P, typename L,  typename H, typename S>
+void lfu::heap_cache<K,V,P,L,H,S>::_print_cache(std::ostream& o) const
 {
 	_consistency_check();
 	base_type::_print_cache(o);
