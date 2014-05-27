@@ -87,7 +87,7 @@ namespace lfu
 		// Heap keeps a priority-queue like structure
 		mutable std::vector<key_type> heap;
 		// Maximum size of cache.
-		size_t max_size;
+		count_type max_size;
 		// Pop back item from heap. Most likely to be recent, and infrequently
 		// used.
 		void _del_back();

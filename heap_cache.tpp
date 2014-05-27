@@ -130,14 +130,10 @@ void lfu::heap_cache<K,V,P,H,S>::increase_key(key_cref k) const
 	assert(c.loc > 0);
 	while(c.loc > 1)
 	{
-		auto pkey = heap[c.loc/2];
-		citem& parent = keymap.at(pkey);
+		citem& parent = keymap.at(heap[c.loc/2]);
 		if(parent.count >= c.count) break;
-		heap[parent.loc] = k;
-		heap[c.loc] = pkey;
-		auto tmp = parent.loc;
-		parent.loc = c.loc;
-		c.loc = tmp;
+		std::swap(heap[parent.loc], heap[c.loc]);
+		std::swap(parent.loc, c.loc);
 	}
 }
 
