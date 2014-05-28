@@ -7,6 +7,7 @@
  */
 
 #include <atomic>
+#include <mutex>
 
 #include "locks.h"
 #include "cache.h"
@@ -36,12 +37,7 @@ namespace concurrent
 		virtual bool insert(const kv_type& kv) {LOCK(_lk); return base_type::insert(kv);}
 		virtual bool insert(kv_type&& kv) {LOCK(_lk); return base_type::insert(std::forward<kv_type>(kv));}
 		virtual bool contains(key_cref key) const {LOCK(_rlk); return base_type::contains();}
-		virtual value_type *lookup(key_cref key) const {LOCK(_lk); return base_type::lookup(key);}
-	};
-
-	struct heap_cache_traits
-	{
-		typedef std::atomic<size_t> count_type;
+		virtual value_type *lookup(key_cref key) const {LOCK(_rlk); return base_type::lookup(key);}
 	};
 
 	/**
@@ -59,7 +55,10 @@ namespace concurrent
 		template<typename... Args>
 		heap_cache(Args&&... args) :
 			default_synchronization(std::forward<Args>(args)...), inuse() {}
-		// copy makes new mutexes. make assignment as well
+		heap_cache(const heap_cache&) = delete;
+		heap_cache(heap_cache&&) = delete;
+		heap_cache& operator=(const heap_cache&) = delete;
+		heap_cache& operator=(heap_cache&&) = delete;
 		virtual ~heap_cache() {}
 		virtual bool insert(const kv_type& kv) {LOCK(_lk); inuse.emplace_back(); return base_type::insert(kv);}
 		virtual bool insert(kv_type&& kv) {LOCK(_lk); inuse.emplace_back(); return base_type::insert(std::forward<kv_type>(kv));}
@@ -70,6 +69,17 @@ namespace concurrent
 	private:
 		std::vector<std::mutex> inuse;
 	};
+
+	struct concurrent_heap_cache_traits
+	{
+		typedef std::atomic<size_t> count_type;
+	};
+
+	template<typename Key, typename Value, typename Pred = std::equal_to<Key>,
+			typename Hash = std::hash<Key> >
+	class lfu_heap_cache : public heap_cache
+		<lfu::heap_cache<Key, Value, Pred, Hash, concurrent_heap_cache_traits> >
+	{	};
 }
 
 template<typename T>

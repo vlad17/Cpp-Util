@@ -11,8 +11,8 @@ auto lfu::heap_cache<K,V,P,H,S>::operator=(const heap_cache& other) -> heap_cach
 {
 	if(this == &other) return *this;
 	clear();
-	if(other.empty()) return *this;
 	max_size = other.max_size;
+	if(other.empty()) return *this;
 	heap = other.heap;
 	keymap = other.keymap;
 	return *this;

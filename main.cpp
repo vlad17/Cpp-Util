@@ -9,6 +9,7 @@
 #include "fibheap.h"
 #include "lfu_cache.h"
 #include "locks.h"
+//#include "concurrent_cache.h"
 
 #include <iostream>
 #include <random>
@@ -30,70 +31,78 @@ void cache_test(), fibheap_test(), locks_test();
 
 int main()
 {
-	fibheap_test();
+	cache_test();
 	return 0;
 }
 
-void cache_test()
+template<typename T>
+void typed_cache_test(T lhc)
 {
-	cout << "LFU test" << endl;
-	cout << "\nheap_cache test" << endl;
-	lfu::heap_cache<int, int> lhc;
-	cout << "Adding (0,1), (0,3) - replace - , (1,2), (2,4)" << endl;
+	cout << "Adding (0,1), (0,3) - replace - , (1,2), (2,4)" ; cout << endl;
 	lhc.insert(make_pair(0,1));
 	lhc.insert(make_pair(1,2));
 	lhc.insert(make_pair(0,3));
 	lhc.insert(make_pair(2,4));
-	cout << lhc << endl;
-	cout << "Empty: " << lhc.empty() << endl;
+	cout << lhc ; cout << endl;
+	cout << "Empty: " << lhc.empty() ; cout << endl;
 	cout << "Looking up key 3 (should be null): ptr=";
-	cout << lhc.lookup(3) << endl;
+	cout << lhc.lookup(3) ; cout << endl;
 	cout << "Looking up key 0: ";
-	cout << *lhc.lookup(0) << endl;
+	cout << *lhc.lookup(0) ; cout << endl;
 	cout << "Looking up key 1 twice: ";
 	cout << *lhc.lookup(1) << ", ";
-	cout << *lhc.lookup(1) << endl;
-	cout << lhc << endl;
-	cout << "Set to max size 1" << endl;
+	cout << *lhc.lookup(1) ; cout << endl;
+	cout << lhc ; cout << endl;
+	cout << "Set to max size 1" ; cout << endl;
 	lhc.set_max_size(1);
-	cout << lhc << endl;
-	cout << "Clear:" << endl;
+	cout << lhc ; cout << endl;
+	cout << "Clear:" ; cout << endl;
 	lhc.clear();
-	cout << lhc << endl;
-	cout << "Empty: " << lhc.empty() << endl;
-	cout << "set max. size 128, fill" << endl;
+	cout << lhc ; cout << endl;
+	cout << "Empty: " << lhc.empty() ; cout << endl;
+	cout << "set max. size 128, fill" ; cout << endl;
 	lhc.set_max_size(128);
 	for(int i = 0; i < 128; ++i)
 		lhc.insert(make_pair(i,i));
-	cout << lhc << endl;
-	cout << "Lookup 500 times, randomly." << endl;
+	cout << lhc ; cout << endl;
+	cout << "Lookup 500 times, randomly." ; cout << endl;
 	for(int i = 0; i < 500; ++i)
 		lhc.lookup(gen()&127);
-	cout << lhc << endl;
-	cout << "Try to insert new item (128,128)" << endl;
+	cout << lhc ; cout << endl;
+	cout << "Try to insert new item (128,128)" ; cout << endl;
 	lhc.insert(make_pair(128,128));
-	cout << lhc << endl;
-	cout << "Generate smaller cache" << endl;
-	lfu::heap_cache<int,int> lhc2;
-	cout << lhc2 << endl;
-	cout << "Add (i,i) up to 10, lookup randomly." << endl;
+	cout << lhc ; cout << endl;
+	cout << "Generate smaller cache" ; cout << endl;
+	T lhc2;
+	cout << lhc2 ; cout << endl;
+	cout << "Add (i,i) up to 10, lookup randomly." ; cout << endl;
 	for(int i = 0; i < 10; ++i)
 		lhc2.insert(make_pair(i,i));
 	for(int i = 0; i < 20; ++i)
 		lhc2.lookup(gen()%10);
-	cout << lhc2 << endl;
-	cout << "copy this new cache to old one. Old one:" << endl;
+	cout << lhc2 ; cout << endl;
+	cout << "copy this new cache to old one. Old one:" ; cout << endl;
 	lhc = lhc2;
-	cout << lhc << endl;
-	cout << "second cache that was copied from after copy:" << endl;
-	cout << lhc2 << endl;
-	cout << "move newly copied old one to previous new one. After move (to assigned):" << endl;
+	cout << lhc ; cout << endl;
+	cout << "second cache that was copied from after copy:" ; cout << endl;
+	cout << lhc2 ; cout << endl;
+	cout << "move newly copied old one to previous new one. After move (to assigned):" ; cout << endl;
 	lhc2 = move(lhc);
-	cout << lhc2 << endl;
-	cout << "after move (from assignment value) - size: " << lhc.size() << endl;
+	cout << lhc2 ; cout << endl;
+	cout << "after move (from assignment value) - size: " << lhc.size() ; cout << endl;
 	lhc2.clear();
+}
+
+void cache_test()
+{
+	cout << "LFU test" ; cout << endl;
+	cout << "\nheap_cache test" ; cout << endl;
+	lfu::heap_cache<int, int> lhc;
+	typed_cache_test(lhc);
+}
+
 #ifdef NDEBUG
-	cout << "stress tests for heap cache...." << endl;
+	cout << "stress tests for heap cache...." ; cout << endl;
 	int constexpr STRESS_REPS = 1e7;
 	int constexpr MAX_KEYSIZE = STRESS_REPS/100;
 	for(int i = 0; i < STRESS_REPS; ++i)
@@ -101,106 +110,105 @@ void cache_test()
 		int test = gen()%MAX_KEYSIZE;
 		auto ptrtest = lhc2.lookup(test);
 		if(ptrtest != nullptr && *ptrtest != test)
-				cout << "\tError: value " << test << " not matched with key" << endl;
+				cout << "\tError: value " << test << " not matched with key" ; cout << endl;
 		if(ptrtest == nullptr)
 			lhc2.insert(make_pair(test,test));
 	}
-	cout << "...Completed" << endl;
+	cout << "...Completed" ; cout << endl;
 #endif /* NDEBUG */
-}
 
 void fibheap_test()
 {
-	cout << "Fibheap test" << endl;
+	cout << "Fibheap test" ; cout << endl;
 	fibheap<int> f;
-	cout << "Add 0..9 in ascending order" << endl;
+	cout << "Add 0..9 in ascending order" ; cout << endl;
 	for(int i = 0; i < 10; ++i)
 		f.push(i);
-	cout << f << endl;
-	cout << "Delete min once" << endl;
+	cout << f ; cout << endl;
+	cout << "Delete min once" ; cout << endl;
 	f.pop();
-	cout << f << endl;
-	cout << "Extract min until empty" << endl;
+	cout << f ; cout << endl;
+	cout << "Extract min until empty" ; cout << endl;
 	while(!f.empty()) f.pop();
-	cout << f << endl;
-	cout << "Add 9..0 in descending order" << endl;
+	cout << f ; cout << endl;
+	cout << "Add 9..0 in descending order" ; cout << endl;
 	for(int i = 9; i >=0; --i)
 		f.push(i);
-	cout << f << endl;
-	cout << "Delete min once" << endl;
+	cout << f ; cout << endl;
+	cout << "Delete min once" ; cout << endl;
 	f.pop();
-	cout << f << endl;
-	cout << "Extract min until empty" << endl;
+	cout << f ; cout << endl;
+	cout << "Extract min until empty" ; cout << endl;
 	while(!f.empty()) f.pop();
-	cout << f << endl;
-	cout << "Clear empty" << endl;
+	cout << f ; cout << endl;
+	cout << "Clear empty" ; cout << endl;
 	f.clear();
-	cout << f << endl;
-	cout << "Clear when filled (adds 10 items first)" << endl;
+	cout << f ; cout << endl;
+	cout << "Clear when filled (adds 10 items first)" ; cout << endl;
 	for(int i = 0; i < 10; ++i) f.push(i);
 	f.clear();
-	cout << f << endl;
-	cout << "Fill with 0,0,0" << endl;
+	cout << f ; cout << endl;
+	cout << "Fill with 0,0,0" ; cout << endl;
 	f.push(0);
 	f.push(0);
 	f.push(0);
-	cout << f << endl;
-	cout << "Extract min" << endl;
+	cout << f ; cout << endl;
+	cout << "Extract min" ; cout << endl;
 	f.pop();
-	cout << f << endl;
-	cout << "Fill with overlap -1,1 x2" << endl;
+	cout << f ; cout << endl;
+	cout << "Fill with overlap -1,1 x2" ; cout << endl;
 	for(int j = 0; j < 2; ++j)
 	{
 			f.push(-1);
 			f.push(1);
 	}
-	cout << f << endl;
-	cout << "Extract min" << endl;
+	cout << f ; cout << endl;
+	cout << "Extract min" ; cout << endl;
 	f.pop();
-	cout << f << endl;
-	cout << "Extract min" << endl;
+	cout << f ; cout << endl;
+	cout << "Extract min" ; cout << endl;
 	f.pop();
-	cout << f << endl;
-	cout << "Extract min" << endl;
+	cout << f ; cout << endl;
+	cout << "Extract min" ; cout << endl;
 	f.pop();
-	cout << f << endl;
-	cout << "Clear when full" << endl;
+	cout << f ; cout << endl;
+	cout << "Clear when full" ; cout << endl;
 	f.clear();
-	cout << f << endl;
+	cout << f ; cout << endl;
 	cout << "Add 1..3";
 	auto one = f.push(1);
 	f.push(2);
 	auto three = f.push(3);
-	cout << f << endl;
-	cout << "Decrease-key 1 to 0" << endl;
+	cout << f ; cout << endl;
+	cout << "Decrease-key 1 to 0" ; cout << endl;
 	f.decrease_key(one, 0);
-	cout << f << endl;
-	cout << "Add 4 x4, then extract min" << endl;
+	cout << f ; cout << endl;
+	cout << "Add 4 x4, then extract min" ; cout << endl;
 	for(int i = 0; i < 3; ++i) f.push(4);
 	auto four = f.push(4);
 	f.pop();
-	cout << f << endl;
-	cout << "Decrease-key 3 to 0" << endl;
+	cout << f ; cout << endl;
+	cout << "Decrease-key 3 to 0" ; cout << endl;
 	f.decrease_key(three, 0);
-	cout << f << endl;
-	cout << "Decrease-key 4 to 3" << endl;
+	cout << f ; cout << endl;
+	cout << "Decrease-key 4 to 3" ; cout << endl;
 	f.decrease_key(four, 3);
-	cout << f << endl;
-	cout << "Extract min" << endl;
+	cout << f ; cout << endl;
+	cout << "Extract min" ; cout << endl;
 	f.pop();
-	cout << f << endl;
-	cout << "Copy construct" << endl;
+	cout << f ; cout << endl;
+	cout << "Copy construct" ; cout << endl;
 	fibheap<int> fcpy(f);
-	cout << fcpy << endl;
-	cout << "heap value after copy:" << endl;
-	cout << f << endl;
-	cout << "Move construct" << endl;
+	cout << fcpy ; cout << endl;
+	cout << "heap value after copy:" ; cout << endl;
+	cout << f ; cout << endl;
+	cout << "Move construct" ; cout << endl;
 	fibheap<int> moved(std::move(f));
-	cout << moved << endl;
-	cout << "heap value after move:" << endl;
-	cout << f << endl;
+	cout << moved ; cout << endl;
+	cout << "heap value after move:" ; cout << endl;
+	cout << f ; cout << endl;
 #ifdef NDEBUG
-	cout << "Stress test for fibheap..." << endl;
+	cout << "Stress test for fibheap..." ; cout << endl;
 	int constexpr STRESS_REPS = 1e7;
 	int constexpr MAX_KEYS = STRESS_REPS/100;
 	// will not have all keys, just some for tests
@@ -221,7 +229,7 @@ void fibheap_test()
 			{
 				fibheap<int>::key_type k = keyarr[moved.top()];
 				if(k != moved.pop())
-					cout << "\tError: popped key does not match saved key" << endl;
+					cout << "\tError: popped key does not match saved key" ; cout << endl;
 			}
 			moved.pop();
 		}
@@ -235,8 +243,8 @@ void fibheap_test()
 
 void locks_test()
 {
-	cout << "locks test...." << endl;
-	cout << "\nrw lock test" << endl;
+	cout << "locks test...." ; cout << endl;
+	cout << "\nrw lock test" ; cout << endl;
 	const int SLEEP = 1000;
 	const int NUM = 5;
 	int shared = 0;
