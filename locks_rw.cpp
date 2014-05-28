@@ -7,7 +7,7 @@
  */
 
 #include <system_error>
-#include "pthread.h"
+#include <pthread.h>
 
 #include "locks.h"
 
@@ -54,7 +54,7 @@ void rw::check(int err, bool kill)
 void rw::lock_shared() {while(pthread_rwlock_rdlock(&_lock) == EAGAIN);}
 bool rw::try_lock_shared() {return !pthread_rwlock_tryrdlock(&_lock);}
 void rw::unlock_shared() {pthread_rwlock_unlock(&_lock);}
-// rwite
+// write
 void rw::lock() {pthread_rwlock_wrlock(&_lock);}
 bool rw::try_lock() {return !pthread_rwlock_trywrlock(&_lock);}
 void rw::unlock() {pthread_rwlock_unlock(&_lock);}

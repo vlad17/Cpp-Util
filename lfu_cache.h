@@ -19,6 +19,14 @@
 
 #include "cache.h"
 
+#define CACHE_TYPEDEFS \
+		typedef typename base_type::key_type key_type; \
+		typedef typename base_type::value_type value_type; \
+		typedef typename base_type::key_equal key_equal; \
+		typedef typename base_type::kv_type kv_type; \
+		typedef typename base_type::key_cref key_cref; \
+		typedef typename base_type::size_type size_type;
+
 namespace lfu
 {
 	struct heap_cache_traits
@@ -54,19 +62,10 @@ namespace lfu
 	public:
 		// Public typedefs
 		typedef cache<Key, Value, Pred> base_type;
-		typedef typename base_type::key_type key_type;
-		typedef typename base_type::value_type value_type;
-		typedef typename base_type::key_equal key_equal;
-		typedef typename base_type::kv_type kv_type;
-		typedef typename base_type::key_cref key_cref;
-		typedef typename base_type::size_type size_type;
+		CACHE_TYPEDEFS
 		typedef Hash hasher;
 		typedef typename Traits::count_type count_type;
-	protected: // TODO what should be private?
-		// REFRESH_RATIO is ratio of cache that remains on lookup-triggered refresh.
-		static constexpr double REFRESH_RATIO = 0.5;
-		// Hash function
-		static hasher hashf;
+	protected:
 		// An item is a key-value pair, location in heap, and count
 		// Maintining all the information in one place allows two-way
 		// access between the heap and lookup map.
@@ -82,6 +81,13 @@ namespace lfu
 			size_t loc;
 			typename Traits::count_type count;
 		};
+		// Increase citem to restore heap property
+		virtual void increase_key(key_cref k) const;
+	private:
+		// REFRESH_RATIO is ratio of cache that remains on lookup-triggered refresh.
+		static constexpr double REFRESH_RATIO = 0.5;
+		// Hash function
+		static hasher hashf;
 		// Maintains mapping from key to citem
 		mutable std::unordered_map<key_type, citem, hasher, key_equal> keymap;
 		// Heap keeps a priority-queue like structure
@@ -97,10 +103,7 @@ namespace lfu
 		void _consistency_check() const;
 		// Prints debug info
 		void _print_cache(std::ostream& o) const;
-		// Increase citem to restore heap property
-		virtual void increase_key(key_cref k) const;
 	public:
-
 		// Constructors/Destructor
 		/*
 		 * INPUT:

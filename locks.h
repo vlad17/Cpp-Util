@@ -9,7 +9,8 @@
 #ifndef RWLOCK_H_
 #define RWLOCK_H_
 
-#include "pthread.h"
+#include <pthread.h>
+#include <mutex>
 
 namespace locks
 {
@@ -17,8 +18,18 @@ namespace locks
 	{
 	private:
 		void check(int err, bool kill);
+		class sharable
+		{
+		private:
+			locks::rw& _lkref;
+		public:
+			sharable(locks::rw& lk) : _lkref(lk) {}
+			void lock() {_lkref.lock_shared();}
+			void unlock() {_lkref.unlock_shared();}
+		};
 		pthread_rwlock_t _lock;
 	public:
+		typedef sharable ronly;
 		rw(const rw&) = delete;
 		rw(rw&&) = delete;
 		rw& operator=(const rw&) = delete;
@@ -35,6 +46,8 @@ namespace locks
 		void lock();
 		bool try_lock();
 		void unlock();
+		// read-only reference (lock() is a lock_shared). Only valid as long as this is.
+		ronly read_only() {return ronly(*this);}
 	};
 }
 
