@@ -46,26 +46,48 @@ namespace concurrent
 
 	/**
 	 * Mutex on keys in hash map, r/w lock on heap. Assumes concurrent traits inserted.
-	 * Relies on methods increase_
+	 * Relies on methods increase_key().
+	 * Assumes instance heap[int] holds keys to a keymap.at(key)
+	 * Requires all removals from heap (at back) done through virtual method.
 	 */
 	template<typename Cache>
 	class heap_cache : public default_synchronization<Cache>
 	{
-	private:
-		std::vector<std::mutex> inuse;
-	protected:
-		virtual
 	public:
 		typedef Cache base_type;
-		typedef typename base_type::count_type count_type;
 		CACHE_TYPEDEFS;
 		template<typename... Args>
 		heap_cache(Args&&... args) :
 			default_synchronization(std::forward<Args>(args)...), inuse() {}
+		// copy makes new mutexes. make assignment as well
 		virtual ~heap_cache() {}
-		virtual bool insert(const kv_type& kv) {LOCK(_lk); return base_type::insert(kv);}
-		virtual bool insert(kv_type&& kv) {LOCK(_lk); return base_type::insert(std::forward<kv_type>(kv));}
+		virtual bool insert(const kv_type& kv) {LOCK(_lk); inuse.emplace_back(); return base_type::insert(kv);}
+		virtual bool insert(kv_type&& kv) {LOCK(_lk); inuse.emplace_back(); return base_type::insert(std::forward<kv_type>(kv));}
+		virtual void set_max_size(size_t size) {LOCK(_lk); base_type::set_max_size();};
+	protected:
+		virtual void increase_key(key_cref k) const;
+		virtual void _del_back() {inuse.pop_back(); base_type::_del_back();} // assumes write lock
+	private:
+		std::vector<std::mutex> inuse;
 	};
+}
+
+template<typename T>
+void concurrent::heap_cache<T>::increase_key(key_cref k) const
+{
+	auto& c = keymap.at(k);
+	assert(c.loc < heap.size());
+	assert(c.loc > 0);
+	while(c.loc > 1)
+	{
+		std::lock(inuse[c.loc/2 - 1], inuse[c.loc - 1]);
+		auto& parent = keymap.at(heap[c.loc/2]);
+		if(parent.count >= c.count) break;
+		std::swap(heap[parent.loc], heap[c.loc]);
+		std::swap(parent.loc, c.loc);
+		inuse[c.loc/2 - 1].unlock();
+		inuse[c.loc - 1].unlock();
+	}
 }
 
 

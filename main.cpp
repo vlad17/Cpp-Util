@@ -17,9 +17,6 @@
 #include <array>
 #include <list>
 #include <thread>
-
-// TODO for all types: try custom move-only, copy-only.
-// For stable_bset try no move, no copy type
 #include <numeric>
 #include <chrono>
 #include <functional>
@@ -33,7 +30,7 @@ void cache_test(), fibheap_test(), locks_test();
 
 int main()
 {
-	locks_test();
+	fibheap_test();
 	return 0;
 }
 

@@ -83,20 +83,20 @@ namespace lfu
 		};
 		// Increase citem to restore heap property
 		virtual void increase_key(key_cref k) const;
+		// Pop back item from heap. Most likely to be recent, and infrequently
+		// used.
+		virtual void _del_back();
+		// Maintains mapping from key to citem
+		mutable std::unordered_map<key_type, citem, hasher, key_equal> keymap;
+		// Heap keeps a priority-queue like structure
+		mutable std::vector<key_type> heap;
 	private:
 		// REFRESH_RATIO is ratio of cache that remains on lookup-triggered refresh.
 		static constexpr double REFRESH_RATIO = 0.5;
 		// Hash function
 		static hasher hashf;
-		// Maintains mapping from key to citem
-		mutable std::unordered_map<key_type, citem, hasher, key_equal> keymap;
-		// Heap keeps a priority-queue like structure
-		mutable std::vector<key_type> heap;
 		// Maximum size of cache.
 		count_type max_size;
-		// Pop back item from heap. Most likely to be recent, and infrequently
-		// used.
-		void _del_back();
 		// Pop REFRESH_RATIO citems off
 		void _del_back_full();
 		// Check invariants
@@ -177,7 +177,7 @@ namespace lfu
 		 * Sets maximum size. May result in deallocations and deletions if
 		 * new max size is smaller than current size.
 		 */
-		void set_max_size(size_t size);
+		virtual void set_max_size(size_t size);
 		/*
 		 * INPUT:
 		 * PRECONDITION:

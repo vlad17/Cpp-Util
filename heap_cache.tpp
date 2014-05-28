@@ -125,12 +125,12 @@ void lfu::heap_cache<K,V,P,H,S>::_del_back_full()
 template<typename K, typename V, typename P, typename H, typename S>
 void lfu::heap_cache<K,V,P,H,S>::increase_key(key_cref k) const
 {
-	citem& c = keymap.at(k);
+	auto& c = keymap.at(k);
 	assert(c.loc < heap.size());
 	assert(c.loc > 0);
 	while(c.loc > 1)
 	{
-		citem& parent = keymap.at(heap[c.loc/2]);
+		auto& parent = keymap.at(heap[c.loc/2]);
 		if(parent.count >= c.count) break;
 		std::swap(heap[parent.loc], heap[c.loc]);
 		std::swap(parent.loc, c.loc);
