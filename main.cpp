@@ -1,18 +1,22 @@
 /*
  * Vladimir Feinberg
  * main.cpp
- * 2014-05-26
+ * 2014-05-27
  *
  * Contains some tests for the data structures, prints to stdout.
  */
 
 #include "fibheap.h"
 #include "lfu_cache.h"
+#include "locks.h"
 
 #include <iostream>
 #include <random>
+#include <string>
+#include <sstream>
 #include <array>
 #include <list>
+#include <thread>
 
 // TODO for all types: try custom move-only, copy-only.
 // For stable_bset try no move, no copy type
@@ -25,11 +29,11 @@ using namespace std;
 const int SEED = 0;
 minstd_rand0 gen(SEED);
 
-void cache_test(), fibheap_test();
+void cache_test(), fibheap_test(), locks_test();
 
 int main()
 {
-	cache_test();
+	locks_test();
 	return 0;
 }
 
@@ -230,4 +234,54 @@ void fibheap_test()
 		moved.pop();
 	cout << "...completed";
 #endif /* NDEBUG */
+}
+
+void locks_test()
+{
+	cout << "locks test...." << endl;
+	cout << "\nrw lock test" << endl;
+	const int SLEEP = 1000;
+	const int NUM = 5;
+	int shared = 0;
+	locks::rw rwlk;
+
+	auto readerf = [&rwlk, &shared, SLEEP, NUM]()
+		{
+			this_thread::sleep_for(chrono::milliseconds(SLEEP));
+			stringstream ss;
+			ss << "\tThread " << this_thread::get_id() << " read: ";
+			for(int i = 0; i < NUM; ++i)
+			{
+				rwlk.lock_shared();
+				int reading = shared;
+				string s = ss.str() + to_string(reading) + '\n';
+				cout << s;
+				rwlk.unlock_shared();
+				this_thread::sleep_for(chrono::milliseconds(SLEEP));
+			}
+		};
+	auto writerf = [&rwlk, &shared, SLEEP](int x)
+		{
+			this_thread::sleep_for(chrono::milliseconds(SLEEP/2));
+			stringstream ss;
+			ss << "\tThread " << this_thread::get_id() << " wrote: ";
+			rwlk.lock();
+			int reading = shared;
+			shared = x;
+			int writing = shared;
+			rwlk.unlock();
+			string s = ss.str() + to_string(reading) + "->" + to_string(writing) + '\n';
+			cout << s;
+			this_thread::sleep_for(chrono::milliseconds(SLEEP));
+		};
+
+		vector<thread> threads;
+		for(int i = 0; i < 3; ++i)
+			threads.push_back(thread(readerf));
+		// Test write
+		for(int i = 0; i < NUM; ++i)
+			writerf(i);
+
+		for(auto& t : threads)
+			t.join();
 }

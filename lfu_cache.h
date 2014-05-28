@@ -1,7 +1,7 @@
 /*
 * Vladimir Feinberg
 * lfu_cache.h
-* 2013-12-28
+* 2014-05-27
 *
 * Defines heap_cache, exact_heap_cache, and linked_cache classes,
 * which are implementations of the abstract cache class that eliminate
@@ -62,7 +62,7 @@ namespace lfu
 		typedef typename base_type::size_type size_type;
 		typedef Hash hasher;
 		typedef typename Traits::count_type count_type;
-	private:
+	protected: // TODO what should be private?
 		// REFRESH_RATIO is ratio of cache that remains on lookup-triggered refresh.
 		static constexpr double REFRESH_RATIO = 0.5;
 		// Hash function
@@ -98,9 +98,7 @@ namespace lfu
 		// Prints debug info
 		void _print_cache(std::ostream& o) const;
 		// Increase citem to restore heap property
-		void increase_key(key_cref k) const;
-	protected:
-		virtual void update_key(key_cref k) const {increase_key(k);}
+		virtual void increase_key(key_cref k) const;
 	public:
 
 		// Constructors/Destructor
@@ -112,6 +110,7 @@ namespace lfu
 		 */
 		heap_cache(size_t max = -1):
 			 keymap(), heap(), max_size(max) {heap.push_back(Key());}
+		// TODO input iterator range constructor
 		/*
 		 * INPUT:
 		 * const heap_cache& other - heap cache to copy from

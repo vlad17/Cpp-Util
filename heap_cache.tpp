@@ -1,6 +1,6 @@
 /*
 * Vladimir Feinberg
-* 2014-05-26
+* 2014-05-27
 * heap_cache.tpp
 *
 * Contains implementation of lfu_cache.h's heap_cache methods.
@@ -77,7 +77,7 @@ auto lfu::heap_cache<K,V,P,H,S>::lookup(key_cref key) const -> value_type*
 	auto it = keymap.find(key);
 	if(it == keymap.end()) return nullptr;
 	++it->second.count;
-	update_key(it->first);
+	increase_key(it->first);
 	return &it->second.val;
 }
 
