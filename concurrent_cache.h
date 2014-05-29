@@ -13,7 +13,7 @@
 #include "cache.h"
 #include "lfu_cache.h"
 
-#define LOCK(x) lock_guard<decltype(x)>(x);
+#define LOCK(x) std::lock_guard<decltype(x)>(x);
 
 // generic concurrency skeleton with r/w lock
 namespace concurrent
@@ -50,19 +50,19 @@ namespace concurrent
 	class heap_cache : public default_synchronization<Cache>
 	{
 	public:
-		typedef Cache base_type;
+		typedef default_synchronization<Cache> base_type;
 		CACHE_TYPEDEFS;
 		template<typename... Args>
 		heap_cache(Args&&... args) :
-			default_synchronization(std::forward<Args>(args)...), inuse() {}
+			base_type(std::forward<Args>(args)...), inuse() {}
 		heap_cache(const heap_cache&) = delete;
 		heap_cache(heap_cache&&) = delete;
 		heap_cache& operator=(const heap_cache&) = delete;
 		heap_cache& operator=(heap_cache&&) = delete;
 		virtual ~heap_cache() {}
-		virtual bool insert(const kv_type& kv) {LOCK(_lk); inuse.emplace_back(); return base_type::insert(kv);}
-		virtual bool insert(kv_type&& kv) {LOCK(_lk); inuse.emplace_back(); return base_type::insert(std::forward<kv_type>(kv));}
-		virtual void set_max_size(size_t size) {LOCK(_lk); base_type::set_max_size();};
+		virtual bool insert(const kv_type& kv) {LOCK(this->base_type::_lk); inuse.emplace_back(); return base_type::insert(kv);}
+		virtual bool insert(kv_type&& kv) {LOCK(this->base_type::_lk); inuse.emplace_back(); return base_type::insert(std::forward<kv_type>(kv));}
+		virtual void set_max_size(size_t size) {LOCK(this->base_type::_lk); base_type::set_max_size();};
 	protected:
 		virtual void increase_key(key_cref k) const;
 		virtual void _del_back() {inuse.pop_back(); base_type::_del_back();} // assumes write lock
@@ -75,6 +75,7 @@ namespace concurrent
 		typedef std::atomic<size_t> count_type;
 	};
 
+	// TODO test and debug
 	template<typename Key, typename Value, typename Pred = std::equal_to<Key>,
 			typename Hash = std::hash<Key> >
 	class lfu_heap_cache : public heap_cache
@@ -85,19 +86,19 @@ namespace concurrent
 template<typename T>
 void concurrent::heap_cache<T>::increase_key(key_cref k) const
 {
-	auto& c = keymap.at(k);
-	assert(c.loc < heap.size());
+	auto& c = T::keymap.at(k);
+	assert(c.loc < T::heap.size());
 	assert(c.loc > 0);
 	while(c.loc > 1)
 	{
 		std::lock(inuse[c.loc/2 - 1], inuse[c.loc - 1]);
-		auto& parent = keymap.at(heap[c.loc/2]);
+		auto& parent = T::keymap.at(T::heap[c.loc/2]);
 		if(parent.count >= c.count) break;
-		std::swap(heap[parent.loc], heap[c.loc]);
+		std::swap(T::heap[parent.loc], T::heap[c.loc]);
 		std::swap(parent.loc, c.loc);
 		inuse[c.loc/2 - 1].unlock();
 		inuse[c.loc - 1].unlock();
-	}
+}
 }
 
 
