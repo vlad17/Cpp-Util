@@ -62,7 +62,7 @@ namespace util
 		template<bool B, class E>
 		struct aux { typedef const E& type; };
 		template<class E>
-		struct aux<true, E> { typedef E type; };
+		struct aux<true, E> { typedef const E type; };
 	public:
 		typedef typename aux<std::is_scalar<T>::value, T>::type type;
 	};
