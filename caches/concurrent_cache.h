@@ -1,7 +1,7 @@
 /*
  * Vladimir Feinberg
  * concurrent_cache.h
- * 2014-05-26
+ * 2014-05-29
  *
  * Contains some template specializations for concurrent versions of caches
  */
@@ -9,7 +9,7 @@
 #include <atomic>
 #include <mutex>
 
-#include "locks.h"
+#include "../pthread_wrappers/locks.h"
 #include "cache.h"
 #include "lfu_cache.h"
 

@@ -9,7 +9,7 @@
 #ifndef CACHE_H_
 #define CACHE_H_
 
-#include "util.h"
+#include "../utilities/util.h"
 
 template<typename Key, typename Value, typename Pred = std::equal_to<Key> >
 class cache

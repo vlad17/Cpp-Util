@@ -16,6 +16,7 @@
 #include <vector>
 #include <cassert>
 #include <algorithm>
+#include <iostream>
 
 #include "cache.h"
 
