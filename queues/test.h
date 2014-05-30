@@ -9,7 +9,9 @@
 #include "lock_free_q.h"
 
 #include <iostream>
+#include <iomanip>
 #include <random>
+#include <cassert>
 
 using namespace std;
 
@@ -27,10 +29,29 @@ void test()
 	unit_test<lfqueue>();
 }
 
+void start(std::string s)
+{
+	cout << '\t' << left << setw(20);
+	cout << s;
+	cout.flush();
+}
+
+void complete()
+{
+	cout << right << "...Completed!\n";
+}
+
 template<template<typename> class T>
 void unit_test()
 {
 	T<int> t;
-	cout << "hi" << endl;
+	start("Insert 0..9");
+	for(int i = 0; i < 10; ++i)
+		t.enqueue(i);
+	complete();
+	start("Remove 0..9");
+	for(int i = 0; i < 10; ++i)
+		assert(t.dequeue([i](int x) {assert(i == x);}));
+	complete();
 }
 
