@@ -27,18 +27,19 @@ void test()
 	// performance comparison here TODO
 	cout << "\nLock Free Queue" << endl;
 	unit_test<lfqueue>();
+	cout << "\nAnother Queue" << endl;
 }
 
 void start(std::string s)
 {
-	cout << '\t' << left << setw(20);
+	cout << '\t' << left << setw(25);
 	cout << s;
 	cout.flush();
 }
 
-void complete()
+void complete(std::string s = "...complete")
 {
-	cout << right << "...Completed!\n";
+	cout << right << s << endl;
 }
 
 template<template<typename> class T>
@@ -53,5 +54,30 @@ void unit_test()
 	for(int i = 0; i < 10; ++i)
 		assert(t.dequeue([i](int x) {assert(i == x);}));
 	complete();
+	start("Attempt empty dequeue");
+	assert(!t.dequeue([](int x) {assert(0);}));
+	complete();
+	start("Insert 0..9");
+	for(int i = 0; i < 10; ++i)
+		t.enqueue(i);
+	complete();
+	start("Remove 0..4");
+	for(int i = 0; i < 5; ++i)
+		assert(t.dequeue([i](int x) {assert(i == x);}));
+	complete();
+	start("Insert 10..14");
+	for(int i = 10; i < 15; ++i)
+		t.enqueue(i);
+	complete();
+	start("Remove 5..14");
+	for(int i = 5; i < 15; ++i)
+		assert(t.dequeue([i](int x) {assert(i == x);}));
+	complete();
+	start("Attempt empty dequeue");
+	assert(!t.dequeue([](int x) {assert(0);}));
+	complete();
+	start("");
+	complete("...........Success!");
+
 }
 
