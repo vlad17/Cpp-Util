@@ -15,10 +15,9 @@ class queue
 protected:
 	queue() {}
 public:
-	typedef unsigned long size_type;
 	virtual ~queue() {}
-	virtual size_type enqueue(T&& t) = 0;
-	virtual T dequeue() = 0;
+	virtual void enqueue(T&& t) = 0;
+	virtual bool dequeue(T& td) = 0; // moves popped to td, return true if moved, false if empty
 };
 
 #endif /* FIFO_H_ */
