@@ -36,7 +36,7 @@ public:
 	// Strong guarentee for enqueues only construction can throw
 	virtual void enqueue(const T& t) {enqueue(new node(t));}
 	virtual void enqueue(T&& t) {enqueue(new node(std::forward<T>(t)));}
-	virtual bool dequeue(const std::function<void(T)>& visit); // strong guarentee
+	virtual bool dequeue(const std::function<void(T&&)>& visit); // strong guarentee
 };
 
 template<typename T>
@@ -59,7 +59,7 @@ void lfqueue<T>::enqueue(node *n) noexcept
 
 // Function call throws b/c of function
 template<typename T>
-bool lfqueue<T>::dequeue(const std::function<void(T)>& visit)
+bool lfqueue<T>::dequeue(const std::function<void(T&&)>& visit)
 {
 	node *oldtail = tail.load(), *cpy;
 	do {if(oldtail == nullptr) return false;}
@@ -68,7 +68,7 @@ bool lfqueue<T>::dequeue(const std::function<void(T)>& visit)
 	head.compare_exchange_strong(cpy = oldtail, oldtail->next.load());
 	// No other enqueue() or dequeue() thread will access oldtail past this point
 	std::unique_ptr<node> _guard(oldtail); // needed for strong
-	visit(std::move_if_noexcept(oldtail->val));
+	visit(std::move(oldtail->val));
 	return true;
 }
 
