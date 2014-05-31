@@ -15,7 +15,38 @@
 #include <atomic>
 #include <utility>
 #include <memory>
+#include <limits>
 
+// Atomic shared_ptr available starting gcc 4.9
+
+// placeholder non-implementation just so code compiles and works for single-thread.
+namespace std
+{
+	// note not atomic at all
+	template<typename T>
+	std::shared_ptr<T> atomic_load( const std::shared_ptr<T>* p ) {return *p;}
+
+	template<typename T>
+	void atomic_store( std::shared_ptr<T>* p,
+										 std::shared_ptr<T> r ) {return p->swap(r);}
+
+	// not atomi
+	template< class T >
+	bool atomic_compare_exchange_weak( std::shared_ptr<T>* p,
+	                                   std::shared_ptr<T>* expected,
+	                                   std::shared_ptr<T> desired)
+	{
+		if(*p == *expected)
+		{
+			*p = desired;
+			return true;
+		}
+		*p = *expected;
+		return false;
+	}
+}
+
+// Lock free if shared_ptr is
 template<typename T>
 class lfqueue : public queue<T>
 {
@@ -28,7 +59,7 @@ private:
 		T val;
 	};
 	std::atomic<node*> head;
-	std::atomic<node*> tail;
+	std::shared_ptr<node> tail; // avoid ABA problem by using atomic shared_ptr
 	void enqueue(node *n) noexcept;
 public:
 	lfqueue() : head(nullptr), tail(nullptr) {}
@@ -50,8 +81,8 @@ void lfqueue<T>::enqueue(node *n) noexcept
 			// Check if oldhead is still head (next is 0)
 			!oldhead->next.compare_exchange_weak(newnext = nullptr, n));
 	// No other enqueue() thread will change head past this point
-	if(first) // no CAS here since dequeue will happily pretend it's empty
-		tail = head.load();
+	if(first)
+		std::atomic_store(&tail, std::shared_ptr<node>{n});
 	else // CAS needed here b/c in the tail == head case dequeue may change head
 		head.compare_exchange_strong(oldhead, oldhead->next.load());
 		// Strong CAS to guarantee head is updated by now to new one
@@ -61,13 +92,18 @@ void lfqueue<T>::enqueue(node *n) noexcept
 template<typename T>
 bool lfqueue<T>::dequeue(const std::function<void(T&&)>& visit)
 {
-	node *oldtail = tail.load(), *cpy;
+	// ABA occurences (*) below prevented by using shared_ptr
+	std::shared_ptr<node> oldtail = std::atomic_load(&tail);
+	node *cpy;
 	do {if(oldtail == nullptr) return false;}
-	while(!tail.compare_exchange_weak(oldtail, oldtail->next.load()));
-	// tail == head case, strong CAS to ensure condition below
-	head.compare_exchange_strong(cpy = oldtail, oldtail->next.load());
+	while(!atomic_compare_exchange_weak(&tail,
+			&oldtail, 																							// ABA here (*)
+			std::shared_ptr<node>{oldtail->next.load()}));
+	// tail == head case (implies tail->next == nullptr)
+	head.compare_exchange_strong(cpy = oldtail.get(), nullptr); // ABA here (*)
 	// No other enqueue() or dequeue() thread will access oldtail past this point
-	std::unique_ptr<node> _guard(oldtail); // needed for strong
+	// ABA impossible since new will never offer resource pointed to by oldtail
+	// until this thread finishes method and destructor deletes.
 	visit(std::move(oldtail->val));
 	return true;
 }
