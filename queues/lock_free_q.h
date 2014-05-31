@@ -17,7 +17,7 @@
 #include <memory>
 #include <limits>
 
-// Atomic shared_ptr available starting gcc 4.9
+// NOT CONCURRENT YET: Atomic shared_ptr available starting gcc 4.9
 
 // placeholder non-implementation just so code compiles and works for single-thread.
 namespace std
@@ -41,7 +41,7 @@ namespace std
 			*p = desired;
 			return true;
 		}
-		*p = *expected;
+		*expected = *p;
 		return false;
 	}
 }

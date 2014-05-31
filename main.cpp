@@ -10,6 +10,7 @@
 //#include "pthread_wrappers/test.h"
 //#include "caches/test.h"
 #include "queues/test.h"
+#include <memory>
 
 int main()
 {
