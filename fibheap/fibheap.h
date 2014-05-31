@@ -138,7 +138,7 @@ private:
 	// Print debug info to ostream
 	void _print_fibheap(std::ostream& o) const;
 
-	static constexpr const double PHI = 1+sqrt((double) 5)/2;
+	static constexpr const double PHI = (1+sqrt(5))/2;
 	static constexpr size_t approx_childnum(size_t size);
 public:
 	// Public typedefs
