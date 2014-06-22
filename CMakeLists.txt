@@ -14,6 +14,13 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE debug)
 endif (NOT CMAKE_BUILD_TYPE)
 
+# Get output location
+
+set(ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+string(TOLOWER ${CMAKE_BUILD_TYPE} BUILDLOWER)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ROOT}/${BUILDLOWER})
+set(OUTDIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
 #executable generation
 
 unset(ALL_LIBS CACHE)
@@ -27,30 +34,28 @@ endfunction()
 set(ALL_DIRS pthread_wrappers fibheap caches queues utilities)
 
 # Adds a test with dependencies on all directories
-function(ADD_TEST_ALL name)
+function(ADD_EXEC_ALL_DEPENDENCIES name)
   add_executable(${name} "${name}.cpp")
   target_link_libraries(${name} ${ALL_LIBS})
 endfunction()
 
+enable_testing()
+
 # Uses additional arguments to add link libraries on top of the local one
-function(ADD_TEST name)
+function(ADD_EXEC name)
   get_filename_component(FDIR ${CMAKE_CURRENT_LIST_DIR} NAME)
   # check if local library exists
   list(FIND ALL_LIBS "${FDIR}" result)
   if (result EQUAL -1)
     unset(FDIR)
   endif (result EQUAL -1)
-  add_executable(${name} "${name}.cpp")
-  target_link_libraries(${name} ${FDIR} ${ARGN})
+  add_executable("${name}.exe" "${name}.cpp")
+  add_test(NAME ${name} COMMAND "${name}.exe" WORKING_DIRECTORY ${OUTDIR})
+  target_link_libraries("${name}.exe" ${FDIR} ${ARGN})
 endfunction()
 
-# TODO figure out cmake testing enable_testing()
 
-### configure paths
-
-set(ROOT ${CMAKE_CURRENT_SOURCE_DIR})
-string(TOLOWER ${CMAKE_BUILD_TYPE} BUILDLOWER)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ROOT}/${BUILDLOWER})
+### configure subdirectories
 
 include_directories(src)
 

@@ -4,4 +4,4 @@ ADD_LIB(
   locks_rw.cpp
 )
 
-ADD_TEST(ptw-test)
+ADD_EXEC(ptw-test)

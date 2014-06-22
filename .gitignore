@@ -8,6 +8,7 @@
 # Cmake files (save the lists, though)
 /CMakeFiles
 CMakeFiles/
+Testing/
 CTestTestfile.cmake
 cmake_install.cmake
 Makefile

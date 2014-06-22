@@ -1,3 +1,3 @@
 # CMakeLists file for utilites directory
 
-ADD_TEST(asp-test)
+ADD_EXEC(asp-test)

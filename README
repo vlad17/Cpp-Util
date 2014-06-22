@@ -2,8 +2,17 @@ Cpp-Util
 
 This is a collection of some data structures I have been working on recently.
 
+Requires cmake 2.6+ and gcc 4.7+
+
+To run tests:
+cmake .
+make -j
+make test
+
 TODO:
+        atomic shared ptr
 	wait-free queue (use above atomic shared_ptr, test multithreaded).
+        Create assert-based tests
 	concurrent heap_cache (finish testing & debugging)
 	exact_heap_cache (see lfu_cache.h) - make separate method in main for comparison/stress
 	linked_cache (see lfu_cache.h)
