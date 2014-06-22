@@ -3,8 +3,7 @@ Cpp-Util
 This is a collection of some data structures I have been working on recently.
 
 TODO:
-	std::atomic<shared_ptr<T> >
-	wait-free queue (use above wrapper, test multithreaded).
+	wait-free queue (use above atomic shared_ptr, test multithreaded).
 	concurrent heap_cache (finish testing & debugging)
 	exact_heap_cache (see lfu_cache.h) - make separate method in main for comparison/stress
 	linked_cache (see lfu_cache.h)

@@ -1,11 +1,17 @@
-# Eclipse binary folders
-/Debug
-/Release
+# Binary folders
+/debug
+/release
 
-# Eclipse project folders
-.cproject
-.project
-.settings
+# emacs backups
+*~
+
+# Cmake files (save the lists, though)
+/CMakeFiles
+CMakeFiles/
+CTestTestfile.cmake
+cmake_install.cmake
+Makefile
+CMakeCache.txt
 
 # From github website:
 # Compiled source #
