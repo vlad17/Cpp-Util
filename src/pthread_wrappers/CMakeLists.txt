@@ -1,7 +1,7 @@
 # CMakeLists file for pthreads_wrappers directory
 
 ADD_LIB(
-  locks_rw.cpp
+  rwlock.cpp
 )
 
 ADD_EXEC(ptw-test)
