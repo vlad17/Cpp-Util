@@ -40,7 +40,7 @@ class atomic_shared_ptr
   // Construct
   constexpr atomic_shared_ptr() noexcept
     : data_(nullptr) {}
-  constexpr atomic_shared_ptr(nullptr_t) noexcept
+  atomic_shared_ptr(std::nullptr_t) noexcept
     : data_(nullptr) {}
   template<class... Args>
     explicit atomic_shared_ptr(Args&&... args)
@@ -56,12 +56,12 @@ class atomic_shared_ptr
     atomic_shared_ptr<T>& operator=(const atomic_shared_ptr<Y>&) noexcept;
   template<typename Y>
     atomic_shared_ptr<T>& operator=(atomic_shared_ptr<Y>&&) noexcept;
-  atomic_shared_ptr<T>& operator=(nullptr_t) noexcept;
+  atomic_shared_ptr<T>& operator=(std::nullptr_t) noexcept;
   // Modify
   template<class... Args>
     void reset(Args&&... args) noexcept;
   template<typename Y>
-    void swap(shared_ptr<Y>& y) noexcept;
+    void swap(atomic_shared_ptr<Y>& y) noexcept;
   // Observe
   T* get() const noexcept;
   T& operator*() const noexcept;
@@ -69,53 +69,46 @@ class atomic_shared_ptr
   long use_count() const noexcept;
   bool unique() const noexcept;
   explicit operator bool() const noexcept;
-  // Friends
-  template<class T, class U>
-    friend atomic_shared_ptr<T>
-    static_pointer_cast(const atomic_shared_ptr<U>&) noexcept;
-  template<class T, class U>
-    friend atomic_shared_ptr<T>
-    dynamic_pointer_cast(const atomic_shared_ptr<U>&) noexcept;
-  template<class T, class U>
-    friend atomic_shared_ptr<T>
-    const_pointer_cast(const atomic_shared_ptr<U>&) noexcept;
-  template<class T>
-    friend std::ostream&
-    operator<<(std::ostream&, const atomic_shared_ptr<T>&) noexcept;
-  template<class T>
-    friend struct hash<atomic_shared_ptr<T> >;
 
  private:
+  struct value_type
+  {
+    template<class... Args>
+      explicit value_type(Args&&... args)
+    : value(std::forward<Args>(args)...) {}
+    T value;
+  };
   class ref_count
   {
   public:
     long up0() { return count_.load() ? 0 : ++count_; }
     long up() { return ++count_; }
     long down() { return --count_; }
-    long count() const{ return count_.load(); }
+    long count() const { return count_.load(); }
   private:
     std::atomic<long> count_;
   };
-  class ref_counted : public ref_count, public T
+  class ref_counted : public ref_count, public value_type
   {
+   public:
     template<class... Args>
       explicit ref_counted(Args&&... args)
-      : ref_count(), T(std::forward<Args>(args)...) { up(); }
+      : ref_count(), value_type(std::forward<Args>(args)...) { up(); }
   };
 
   template<typename Y>
-    atomic_shared_ptr<T>::ref_counted*
-    cast(atomic_shared_ptr<Y>::ref_counted* y) {
-    return static_cast<atomic_shared_ptr<T>::ref_counted*>(y); }
+    static atomic_shared_ptr<T>::ref_counted*
+    cast(Y* y)
+    { return static_cast<atomic_shared_ptr<T>::ref_counted*>(y); }
 
   // down delete, up0 trim
   static bool up(ref_counted* ptr) { return ptr ? ptr->up() : false; }
   static bool down(ref_counted* ptr) { return ptr ? !ptr->down() : false; }
-  static long count(ref_counted* ptr) const { return ptr ? ptr->count() : 0; }
+  static long count(const ref_counted* ptr) { return ptr ? ptr->count() : 0; }
   // requires ownership already
   bool up() { return up(data_.load()); }
   bool down() { return down(data_.load()); }
-  long count() { return count(data_.load()); }
+  long count() const { return count(data_.load()); }
 
   std::atomic<ref_counted*> data_;
 };
@@ -132,8 +125,8 @@ atomic_shared_ptr<T>::operator=(const atomic_shared_ptr<Y>& y) noexcept {
   } while (next && !next->up0());
   // Spin on replacement
   auto prev = data_.load();
-  while (!data_.compare_exchange_weak(&previous, next));
-  if (!down(previous))
+  while (!data_.compare_exchange_weak(&prev, next));
+  if (!down(prev))
     delete prev;
   return *this;
 }
@@ -154,7 +147,7 @@ atomic_shared_ptr<T>::operator=(atomic_shared_ptr<Y>&& y) noexcept {
 
 template<typename T>
 atomic_shared_ptr<T>&
-atomic_shared_ptr<T>::operator=(nullptr_t) noexcept {
+atomic_shared_ptr<T>::operator=(std::nullptr_t) noexcept {
   auto prev = data_.exchange(nullptr);
   assert(!prev || prev->count());
   if (!down(prev))
@@ -162,7 +155,7 @@ atomic_shared_ptr<T>::operator=(nullptr_t) noexcept {
   return *this;
 }
 // Modify
-template<typname T>
+template<typename T>
 template<class... Args>
 void
 atomic_shared_ptr<T>::reset(Args&&... args) noexcept {
@@ -174,7 +167,7 @@ atomic_shared_ptr<T>::reset(Args&&... args) noexcept {
 template<typename T>
 template<class Y>
 void
-atomic_shared_ptr<T>::swap(shared_ptr<Y>& y) noexcept {
+atomic_shared_ptr<T>::swap(atomic_shared_ptr<Y>& y) noexcept {
   // TODO faster manually inlined implementation
   std::swap(*this, y);
 }
@@ -184,7 +177,7 @@ template<typename T>
 T*
 atomic_shared_ptr<T>::get() const noexcept {
   auto ptr = data_.load();
-  return static_cast<T*>(ptr);
+  return ptr ? &ptr->value : nullptr;
 }
 
 template<typename T>
@@ -201,7 +194,7 @@ atomic_shared_ptr<T>::operator->() const noexcept {
 
 template<typename T>
 long
-use_count() const noexcept {
+atomic_shared_ptr<T>::use_count() const noexcept {
   return count(data_.load());
 }
 
@@ -211,55 +204,46 @@ atomic_shared_ptr<T>::unique() const noexcept {
   return use_count() == 1;
 }
 
-explicit operator bool() const noexcept {
+template<typename T>
+atomic_shared_ptr<T>::operator bool() const noexcept {
   return get();
 }
 
-// Friends
-
-namespace {
-  template<class T, class U, class Cast>
-  inline atomic_shared_ptr<T>
-  generic_cast(const atomic_shared_ptr<U>& u) noexcept {
-    atomic_shared_ptr<T> t;
-    auto uptr = u.load();
-    auto tptr = Cast(uptr);
-    t.data_.store(tptr);
-    return t;
-  }
-}
+// Non-member associated functions
 
 template<class T, class U>
 atomic_shared_ptr<T>
 static_pointer_cast(const atomic_shared_ptr<U>& u) noexcept {
-  return generic_cast<T, U, static_cast<T> >(u);
+  return u;
 }
 
 template<class T, class U>
 atomic_shared_ptr<T>
 dynamic_pointer_cast(const atomic_shared_ptr<U>& u) noexcept {
-  return generic_cast<T, U, dynamic_cast<T> >(u);
+  return atomic_shared_ptr<T>(dynamic_cast<T>(u.get()));
 }
 
 template<class T, class U>
 atomic_shared_ptr<T>
 const_pointer_cast(const atomic_shared_ptr<U>& u) noexcept {
-  return generic_cast<T, U, const_cast<T> >(u);
+  return atomic_shared_ptr<T>(const_cast<T>(u.get()));
 }
 
 template<class T>
-friend std::ostream&
+std::ostream&
 operator<<(std::ostream& o, const atomic_shared_ptr<T>& ptr) noexcept {
   o << ptr.get();
   return o;
 }
 
-template<class T>
-friend struct hash<atomic_shared_ptr<T> > {
-  size_t operator()(const atomic_shared_ptr<T>& ptr) {
-    static const hash<T*> hashf;
-    return hashf(ptr.get());
-  }
+namespace std {
+  template<class T>
+    struct hash<atomic_shared_ptr<T> > {
+    size_t operator()(const atomic_shared_ptr<T>& ptr) {
+      static const hash<T*> hashf;
+      return hashf(ptr.get());
+    }
+  };
 }
 
 /*
@@ -306,4 +290,4 @@ bool atomic_compare_exchange_weak_explicit(atomic_shared_ptr<T>* p,
                                            std::memory_order failure);
 */
 
-#endif /* FIFO_H_ */
+#endif /* ATOMIC_SHARED_PTR_H_ */
