@@ -10,8 +10,10 @@ make -j
 make test
 
 TODO:
-        atomic shared ptr
+        atomic shared ptr (cas, other atomic ops)
+        atomic shared ptr multithread testing.
 	wait-free queue (use above atomic shared_ptr, test multithreaded).
+        Create exception-based test file? Install gtest?
         create test-testandset spinlock, and then queuelock (with everyhting, Art of mpp ch.7) 
         Create assert-based tests
 	concurrent heap_cache (finish testing & debugging)

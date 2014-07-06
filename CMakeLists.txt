@@ -7,6 +7,7 @@ set(CMAKE_CXX_COMPILER g++)
 set(GENERAL_FLAGS "-Wall -Wextra -std=c++11 -pthread -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-ggdb -O0 ${GENERAL_FLAGS}")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG ${GENERAL_FLAGS}")
+set(CTEST_OUTPUT_ON_FAIL TRUE)
 
 # Get build
 
