@@ -10,6 +10,7 @@ make -j
 make test
 
 TODO:
+        atomic shared ptr fix casts + test
         atomic shared ptr (cas, other atomic ops)
         atomic shared ptr multithread testing.
 	wait-free queue (use above atomic shared_ptr, test multithreaded).
