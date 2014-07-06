@@ -12,6 +12,7 @@ make test
 TODO:
         atomic shared ptr
 	wait-free queue (use above atomic shared_ptr, test multithreaded).
+        create test-testandset spinlock, and then queuelock (with everyhting, Art of mpp ch.7) 
         Create assert-based tests
 	concurrent heap_cache (finish testing & debugging)
 	exact_heap_cache (see lfu_cache.h) - make separate method in main for comparison/stress

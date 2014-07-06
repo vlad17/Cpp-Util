@@ -45,13 +45,19 @@ class atomic_shared_ptr
   template<class... Args>
     explicit atomic_shared_ptr(Args&&... args)
     : data_(new ref_counted(std::forward<Args>(args)...)) {}
+  atomic_shared_ptr(const atomic_shared_ptr<T>& t) noexcept
+    : atomic_shared_ptr() { *this = t; }
+  atomic_shared_ptr(atomic_shared_ptr<T>&& t) noexcept
+    : atomic_shared_ptr() { *this = std::forward<atomic_shared_ptr<T> >(t); }
   template<typename Y>
     atomic_shared_ptr(const atomic_shared_ptr<Y>& y) noexcept
     : atomic_shared_ptr() { *this = y; }
   template<typename Y>
     atomic_shared_ptr(atomic_shared_ptr<Y>&& y) noexcept
     : atomic_shared_ptr() { *this = std::forward<atomic_shared_ptr<Y> >(y); }
+  ~atomic_shared_ptr() noexcept { *this = nullptr; }
   // Assign
+  atomic_shared_ptr<T>& operator=(const atomic_shared_ptr& t) noexcept { return this->operator=<T>(t); }
   template<typename Y>
     atomic_shared_ptr<T>& operator=(const atomic_shared_ptr<Y>&) noexcept;
   template<typename Y>
@@ -69,6 +75,12 @@ class atomic_shared_ptr
   long use_count() const noexcept;
   bool unique() const noexcept;
   explicit operator bool() const noexcept;
+  bool operator==(std::nullptr_t) const;
+  template<typename Y>
+    bool operator==(const atomic_shared_ptr<Y>&) const;
+  bool operator!=(std::nullptr_t) const;
+  template<typename Y>
+    bool operator!=(const atomic_shared_ptr<Y>&) const;
 
  private:
   struct value_type
@@ -81,7 +93,7 @@ class atomic_shared_ptr
   class ref_count
   {
   public:
-    long up0() { return count_.load() ? 0 : ++count_; }
+    long up0() { return count_.load() ? ++count_ : 0; }
     long up() { return ++count_; }
     long down() { return --count_; }
     long count() const { return count_.load(); }
@@ -125,8 +137,8 @@ atomic_shared_ptr<T>::operator=(const atomic_shared_ptr<Y>& y) noexcept {
   } while (next && !next->up0());
   // Spin on replacement
   auto prev = data_.load();
-  while (!data_.compare_exchange_weak(&prev, next));
-  if (!down(prev))
+  while (!data_.compare_exchange_weak(prev, next));
+  if (down(prev))
     delete prev;
   return *this;
 }
@@ -140,7 +152,7 @@ atomic_shared_ptr<T>::operator=(atomic_shared_ptr<Y>&& y) noexcept {
   assert(!next || next->count());
   auto prev = data_.exchange(next);
   assert(!prev || prev->count());
-  if (!down(prev))
+  if (down(prev))
     delete prev;
   return *this;
 }
@@ -150,7 +162,7 @@ atomic_shared_ptr<T>&
 atomic_shared_ptr<T>::operator=(std::nullptr_t) noexcept {
   auto prev = data_.exchange(nullptr);
   assert(!prev || prev->count());
-  if (!down(prev))
+  if (down(prev))
     delete prev;
   return *this;
 }
@@ -183,7 +195,7 @@ atomic_shared_ptr<T>::get() const noexcept {
 template<typename T>
 T&
 atomic_shared_ptr<T>::operator*() const noexcept {
-  return *get();
+  return data_.load()->value;
 }
 
 template<typename T>
@@ -244,6 +256,28 @@ namespace std {
       return hashf(ptr.get());
     }
   };
+}
+
+template<typename T>
+bool atomic_shared_ptr<T>::operator==(std::nullptr_t) const {
+  return get() == nullptr;
+}
+
+template<typename T>
+template<typename Y>
+bool atomic_shared_ptr<T>::operator==(const atomic_shared_ptr<Y>& y) const {
+  return get() == y.get();
+}
+
+template<typename T>
+bool atomic_shared_ptr<T>::operator!=(std::nullptr_t) const {
+  return get() != nullptr;
+}
+
+template<typename T>
+template<typename Y>
+bool atomic_shared_ptr<T>::operator!=(const atomic_shared_ptr<Y>& y) const {
+  return get() != y.get();
 }
 
 /*

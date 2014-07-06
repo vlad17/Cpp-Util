@@ -9,7 +9,7 @@
 #include <system_error>
 #include <pthread.h>
 
-#include "pthread_wrappers/rwlock.hpp"
+#include "sync/rwlock.hpp"
 
 using namespace std;
 using namespace locks;

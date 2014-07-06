@@ -31,7 +31,7 @@ function(ADD_LIB)
 endfunction()
 
 # All subdirectories
-set(ALL_DIRS pthread_wrappers fibheap caches queues utilities)
+set(ALL_DIRS sync fibheap caches queues utilities)
 
 # Adds a test with dependencies on all directories
 function(ADD_EXEC_ALL_DEPENDENCIES name)
@@ -53,7 +53,6 @@ function(ADD_EXEC name)
   add_test(NAME ${name} COMMAND "${name}.exe" WORKING_DIRECTORY ${OUTDIR})
   target_link_libraries("${name}.exe" ${FDIR} ${ARGN})
 endfunction()
-
 
 ### configure subdirectories
 

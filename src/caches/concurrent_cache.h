@@ -9,7 +9,7 @@
 #include <atomic>
 #include <mutex>
 
-#include "pthread_wrappers/rwlock.hpp"
+#include "sync/rwlock.hpp"
 #include "cache.h"
 #include "lfu_cache.h"
 
