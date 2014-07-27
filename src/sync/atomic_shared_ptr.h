@@ -10,7 +10,15 @@
 #define ATOMIC_SHARED_PTR_H_
 
 #include <atomic>
+#include <cassert>
 #include <utility>
+
+// Dummy type for default construction:
+// > atomic_shared_ptr<T> aspt(default_construct)
+// The above will allocate a new T() for the shared pointer, whereas
+// > atomic_shared_ptr<T> aspt;
+// will create a atomic shared pointer referring to null.
+struct __ATOMIC_SHARED_PTR_H_default_construct {} default_construct;
 
 // Atomic pointer implements a basic shared pointer, containing data
 // and a reference count. However, its interface is slightly different
@@ -42,6 +50,8 @@ class atomic_shared_ptr
     : data_(nullptr) {}
   atomic_shared_ptr(std::nullptr_t) noexcept
     : data_(nullptr) {}
+  atomic_shared_ptr(__ATOMIC_SHARED_PTR_H_default_construct)
+    : data_(new ref_counted()) {}
   template<class... Args>
     explicit atomic_shared_ptr(Args&&... args)
     : data_(new ref_counted(std::forward<Args>(args)...)) {}
@@ -83,15 +93,13 @@ class atomic_shared_ptr
     bool operator!=(const atomic_shared_ptr<Y>&) const;
 
  private:
-  struct value_type
-  {
+  struct value_type {
     template<class... Args>
       explicit value_type(Args&&... args)
     : value(std::forward<Args>(args)...) {}
     T value;
   };
-  class ref_count
-  {
+  class ref_count {
   public:
     long up0() { return count_.load() ? ++count_ : 0; }
     long up() { return ++count_; }
@@ -100,8 +108,7 @@ class atomic_shared_ptr
   private:
     std::atomic<long> count_;
   };
-  class ref_counted : public ref_count, public value_type
-  {
+  class ref_counted : public ref_count, public value_type {
    public:
     template<class... Args>
       explicit ref_counted(Args&&... args)
@@ -111,7 +118,31 @@ class atomic_shared_ptr
   template<typename Y>
     static atomic_shared_ptr<T>::ref_counted*
     cast(Y* y)
+    // TODO Implement valid static cast
     { return static_cast<atomic_shared_ptr<T>::ref_counted*>(y); }
+
+  // Friends
+  // The first friendship below can be gotten rid of with
+  // static_pointer_casts in every method, but that's uglier
+  // and slower than having the extra friend.
+  template<class Y>
+  friend class atomic_shared_ptr;
+  template<class U, class Cast>
+  friend
+  atomic_shared_ptr<U>
+  generic_pointer_cast(const atomic_shared_ptr<T>& u) noexcept;
+  template<class U>
+  friend
+  atomic_shared_ptr<U>
+  static_pointer_cast(const atomic_shared_ptr<T>& u) noexcept;
+  template<class U>
+  friend
+  atomic_shared_ptr<U>
+  dynamic_pointer_cast(const atomic_shared_ptr<T>& u) noexcept;
+  template<class U>
+  friend
+  atomic_shared_ptr<U>
+  const_pointer_cast(const atomic_shared_ptr<T>& u) noexcept;
 
   // down delete, up0 trim
   static bool up(ref_counted* ptr) { return ptr ? ptr->up() : false; }
@@ -223,22 +254,53 @@ atomic_shared_ptr<T>::operator bool() const noexcept {
 
 // Non-member associated functions
 
+// Internal
+template<class T, class Cast, class U>
+atomic_shared_ptr<T>
+generic_pointer_cast(const atomic_shared_ptr<U>& u) noexcept {
+  static const Cast cast;
+  // Make a local copy of the pointer to increment the use count
+  auto local_copy = u;
+  // Generate return value with the data casted appropriately
+  atomic_shared_ptr<T> ret = nullptr;
+  auto casted = cast(local_copy.data_);
+  ret.data_ = casted;
+  // Set local copy to null so it won't decrement the counter
+  local_copy.data_ = nullptr;
+  return ret;
+}
+
 template<class T, class U>
 atomic_shared_ptr<T>
 static_pointer_cast(const atomic_shared_ptr<U>& u) noexcept {
-  return u;
+  typedef typename atomic_shared_ptr<T>::ref_counted TRC;
+  typedef typename atomic_shared_ptr<U>::ref_counted URC;
+  struct SC {
+    TRC* operator()(URC* rc) {
+      return static_cast<TRC*>(rc);
+    }
+  };
+  return generic_pointer_cast<T, SC>(u);
 }
 
 template<class T, class U>
 atomic_shared_ptr<T>
 dynamic_pointer_cast(const atomic_shared_ptr<U>& u) noexcept {
-  return atomic_shared_ptr<T>(dynamic_cast<T>(u.get()));
+  if (!dynamic_cast<T>(u.get())) return nullptr;
+  return static_pointer_cast(u);
 }
 
 template<class T, class U>
 atomic_shared_ptr<T>
 const_pointer_cast(const atomic_shared_ptr<U>& u) noexcept {
-  return atomic_shared_ptr<T>(const_cast<T>(u.get()));
+  typedef typename atomic_shared_ptr<T>::ref_counted TRC;
+  typedef typename atomic_shared_ptr<U>::ref_counted URC;
+  struct CC {
+    TRC* operator()(URC* rc) {
+      return const_cast<TRC*>(rc);
+    }
+  };
+  return generic_pointer_cast<T, CC>(u);
 }
 
 template<class T>
