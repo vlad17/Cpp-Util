@@ -5,4 +5,3 @@ ADD_LIB(
 )
 
 ADD_EXEC(ptw-test)
-ADD_EXEC(asp-test)
