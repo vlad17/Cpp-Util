@@ -1,6 +1,7 @@
 /*
   Vladimir Feinberg
-  test-util.include
+  test_util.include
+  2014-08-02
 
   Contains implementation of all the macros used in the basic
   testing header. Keeps details away from test-util.h file.

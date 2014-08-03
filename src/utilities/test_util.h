@@ -1,6 +1,7 @@
 /*
   Vladimir Feinberg
-  test-util.h
+  test_util.h
+  2014-08-02
 
   Defines the basic test macros and the main method for
   all the unit test files, which should just implement
@@ -31,6 +32,6 @@
 // Expr `x == 5` failed: x is 4
 void test_main();
 
-#include "utilities/test-util.include"
+#include "utilities/test_util.include"
 
 #endif /* TEST_UTIL_H_ */
