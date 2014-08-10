@@ -1,22 +1,24 @@
 /*
  * Vladimir Feinberg
  * mpmc-test.cpp
- * 2014-08-02
+ * 2014-08-15
  *
  * Defines tests for mpmc synchronoized queues.
  */
 
-#define LOCK_FREE_Q_H_PRINT_DEBUG_STRING
+#define QUEUES_SHARED_QUEUE_H_PRINT_DEBUG_STRING
 
 #include <iostream>
 #include <iomanip>
 #include <random>
 #include <string>
 #include <sstream>
+#include <thread>
+#include <vector>
 
 #include "utilities/test_util.h"
 #include "queues/queue.h"
-#include "queues/lock_free_q.h"
+#include "queues/shared_queue.h"
 
 using namespace std;
 
@@ -32,6 +34,7 @@ void test_main() {
   cout << "\nLock Free Queue" << endl;
   unit_test<lfqueue>();
   // cout << "\nAnother Queue" << endl; TODO
+  test_multithreaded();
 }
 
 void start(const string& s) {
@@ -66,7 +69,7 @@ void unit_test() {
   start("Insert 0..9");
   for(int i = 0; i < 10; ++i)
     t.enqueue(i);
-  ASSERT(same(t, {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}));
+  ASSERT(same(t, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
   ASSERT(!t.empty());
   complete();
   start("Remove 0..9");
@@ -78,7 +81,7 @@ void unit_test() {
   start("Insert 0..9");
   for(int i = 0; i < 10; ++i)
     t.enqueue(i);
-  ASSERT(same(t, {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}));
+  ASSERT(same(t, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
   ASSERT(!t.empty());
   complete();
   start("Remove 0..4");
@@ -90,7 +93,7 @@ void unit_test() {
   start("Insert 10..14");
   for(int i = 10; i < 15; ++i)
     t.enqueue(i);
-  ASSERT(same(t, {14, 13, 12, 11, 10, 9, 8, 7, 6, 5}));
+  ASSERT(same(t, {5, 6, 7, 8, 9, 10, 11, 12, 13, 14}));
   complete();
   start("Remove 5..14");
   for(int i = 5; i < 15; ++i)
@@ -100,4 +103,10 @@ void unit_test() {
   complete();
   start("");
   complete("...........Success!");
+}
+
+// TODO tempalte template
+void test_multithreaded() {
+  lfqueue<int> x;
+  vector<int> v;
 }

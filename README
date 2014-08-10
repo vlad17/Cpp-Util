@@ -10,14 +10,23 @@ make -j
 make test
 
 TODO:
-        lock_free queue
-        lfqueue testing
+        shared queue finish
+        rename every *.h to *.hpp
+        namespace for individual libraries
+        shared testing
+        reverse head/tail names
         condition variable wrapper pthreads
-        add condition to lfqueue, test.
-        stamped reference class (wait or lock free?)
-        wait free queue
-        wait free queue testing
-        perf check wfqueue vs lfqueue
+        implement Countdown latch
+        document throws for pthreads (look at the "too many readers" return val, maybe spin?)
+        implement SingularThreadpool (1t)
+        DynamicThreadpool (min, max, timeout)
+        WorkStealingThreadpool # not fair, uses distributor
+        add condition to shared_queue, test (notify all if not empty, single if was)
+        stamped reference class (wait or lock free?) (needed?)
+        lock free queue (use node pool)
+        lock free queue testing 
+        perf check shared_queue vs lfqueue (vs boost queue ?)
+        clean up TODOs in code
         Create exception-based test file - use multithreaded exceptions.
         create test-testandset spinlock, and then queuelock (with everyhting, Art of mpp ch.7) 
         Create assert-based tests

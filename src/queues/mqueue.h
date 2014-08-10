@@ -6,8 +6,8 @@
    Contains FIFO queue interface.
  */
 
-#ifndef QUEUES_QUEUE_H_
-#define QUEUES_QUEUE_H_
+#ifndef FIFO_H_
+#define FIFO_H_
 
 #include "queues/size_except.h"
 
@@ -30,4 +30,4 @@ class queue {
   virtual T try_dequeue() = 0;
 };
 
-#endif /* QUEUES_QUEUE_H_ */
+#endif /* FIFO_H_ */
