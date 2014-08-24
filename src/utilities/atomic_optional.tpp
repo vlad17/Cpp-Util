@@ -7,8 +7,8 @@
 */
 
 template<typename T>
-util::atomic_optional<T>::atomic_optional()
-    intiialized(false);
+util::atomic_optional<T>::atomic_optional() :
+    initialized(false) {}
 
 template<typename T>
 util::atomic_optional<T>::atomic_optional(T&& rval) :
@@ -28,9 +28,10 @@ bool util::atomic_optional<T>::valid() const {
 }
 
 template<typename T>
-bool util::atomic_optional<T>::invalidate() const {
+bool util::atomic_optional<T>::invalidate() {
   bool expected = true;
   return initialized.compare_exchange_strong(expected, false,
+                                             std::memory_order_relaxed,
                                              std::memory_order_relaxed);
 }
 

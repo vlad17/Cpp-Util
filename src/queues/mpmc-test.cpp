@@ -34,13 +34,11 @@ void test_multithreaded();
 void test_main() {
   cout << "Queue Test..." << endl;
   // performance comparison here TODO
-#if QUEUES_SHARED_QUEUE_DEFINED
   cout << "\nShared Queue" << endl;
   cout << "\tUnit testing:" << endl;
   unit_test<shared_queue>();
   cout << "\n\tMultithreaded test:" << endl;
   test_multithreaded<shared_queue>();
-#endif
 }
 
 void start(const string& s) {
@@ -111,6 +109,8 @@ void unit_test() {
   complete("...........Success!");
 }
 
+template<template<typename> class T>
 void test_multithreaded() {
   // TODO
+  cout << "Test not yet made.\n";
 }

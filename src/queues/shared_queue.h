@@ -9,18 +9,8 @@
  * the advice in The Art of Multiprocessor Programming.
  *
  * For the most part the queue's lock free, but it relies
- * on an atomic shared_ptr, the safe_ptr, which may not be.
+ * on an atomic shared_ptr, which may not be.
  */
-
-// For now, only clang 3.4 with libc++ can support std::atomic_... operations
-// on shared_ptrs
-#if defined(__clang__) && __clang_major__ > 3 || \
-  (__clang_major__ == 3 && __clang_minor__ >= 4)
-#define QUEUES_SHARED_QUEUE_DEFINED 1
-#else
-#define QUEUES_SHARED_QUEUE_DEFINED 0
-#define QUEUES_SHARED_QUEUE_H_
-#endif
 
 #ifndef QUEUES_SHARED_QUEUE_H_
 #define QUEUES_SHARED_QUEUE_H_
@@ -32,12 +22,15 @@
 
 #include "queues/queue.h"
 #include "utilities/atomic_optional.h"
+#include "utilities/shared_atomic.h"
 
-// TODO: potential optimization - put test-and-CAS for every CAS
-// (check this actually helps)
+template<typename T>
+class shared_queue;
 
 template<typename T>
 std::ostream& operator<<(std::ostream&, const shared_queue<T>&);
+
+// TODO is_lock_free
 
 // T does not have to be synchronized; this class will the needed
 // memory bariers for it to be always accessed in a linearized manner.
@@ -47,12 +40,12 @@ std::ostream& operator<<(std::ostream&, const shared_queue<T>&);
 template<typename T>
 class shared_queue : public queue<T> {
  private:
-  class node : {
+  struct node {
     node() : next(nullptr), val() {}
     node(T&& val) : next(nullptr), val(std::forward<T>(val)) {}
 
     std::atomic<node*> next;
-    atomic_optional<T> val;
+    util::atomic_optional<T> val;
   };
 
   // Shared pointer at the head to avoid ABA problem -
@@ -62,13 +55,16 @@ class shared_queue : public queue<T> {
   std::shared_ptr<node> head;
   std::atomic<node*> tail;
 
+  SHARED_COMPATIBLE_LOCK(headlk);
+
   void enqueue(node* n) noexcept;
 
  public:
   shared_queue() {
-    head.store(make_shared<node>(), std::memory_order_relaxed);
-    std::atomic_store_explicit(&tail, safe_ptr(nullptr),
-                               std::memory_order_relaxed);
+    auto sptr = std::make_shared<node>();
+    tail.store(sptr.get(), std::memory_order_relaxed);
+    std::atomic_store_explicit(&head, sptr, std::memory_order_relaxed,
+                               SHARED_COMPATIBLE(headlk));
   }
   virtual ~shared_queue() {}
   // Oberservers
@@ -77,15 +73,15 @@ class shared_queue : public queue<T> {
   virtual bool empty();
   // Strong guarantee for enqueues
   // Only construction of T or new node will throw.
-  virtual void enqueue(T&& t) { enqueue(new node(std::forward<T>(t))); }
-  virtual void try_enqueue(T&&) {throw std::runtime_error("Unsupported");}
+  virtual void enqueue(T t) { enqueue(new node(std::move(t))); }
+  virtual void try_enqueue(T) {throw std::runtime_error("Unsupported");}
   // Strong guarantee for dequeue - only move can throw
   // In addition, empty_error may be thrown for try_dequeue()
   virtual T dequeue();
   virtual T try_dequeue() {throw std::runtime_error("Unsupported");}
   // For debugging. Prints [head ... tail]. Requires external locking
   // so that no operations occur on the queue.
-  friend std::ostream& operator<<(std::ostream&, const shared_queue&);
+  friend std::ostream& operator<< <>(std::ostream&, const shared_queue&);
 };
 
 // TODO move to tpp
@@ -153,7 +149,8 @@ class shared_queue : public queue<T> {
 
 template<typename T>
 bool shared_queue<T>::empty() {
-  auto oldhead = std::atomic_load_explicit(head, std::memory_order_relaxed);
+  auto oldhead = std::atomic_load_explicit(&head, std::memory_order_relaxed,
+                                           SHARED_COMPATIBLE(headlk));
   auto oldtail = tail.load(std::memory_order_relaxed);
   return oldhead.get() != oldtail || oldhead->val.valid();
 }
@@ -166,29 +163,45 @@ void shared_queue<T>::enqueue(node* n) noexcept {
   // Require release semantics on node->next pointer - see documentation above
   // Set head->next to n if it is still null
   while (!oldtail->next.compare_exchange_weak(newnext, n,
-                                              std::memory_order_release)) {
+                                              std::memory_order_release,
+                                              std::memory_order_relaxed)) {
     // Validity of newnext in the commented CAS below is guaranteed
     // if the CAS succeeds b/c it meant that right before the CAS the tail
     // was still oldtail, so its next could not have been deleted.
     // In the case it does not succeed, we don't care since we wipe newnext.
-    tail.compare_exchange_weak(oldtail, newnext, std::memory_order_relaxed);
+    tail.compare_exchange_weak(oldtail, newnext, std::memory_order_relaxed,
+                               std::memory_order_relaxed);
     newnext = nullptr;
   }
 
   // Make sure that by the time we are finished enqueuing, a dequeuer
   // is able to remove the head.
-  tail.compare_exchange_strong(oldtail, newnext, std::memory_order_relaxed);
+  tail.compare_exchange_strong(oldtail, newnext, std::memory_order_relaxed,
+                               std::memory_order_relaxed);
 }
 
 template<typename T>
 T shared_queue<T>::dequeue()
 {
+  // Specialized destructor shared pointer for local shared pointers
+  // which toggles on the actual destruction (no need for atomics
+  // here becuase of other memory barriers.
+  struct ToggleDeleter {
+    void operator()(node* n) {
+      if (enabled) delete n;
+    }
+    bool enabled;
+  };
+  ToggleDeleter del;
+  del.enabled = true;
+
   // Require acquire semantics on tail->next - see documentation above
   // ABA is avoided by using shared pointers - if a local
   // pointer is the same as one in the atomic tail register,
   // then the value pointed to by the local pointer is the same as
   // it was when the local pointer was last written to.
-  auto oldhead = std::atomic_load_explicit(&head, std::memory_order_acquire);
+  auto oldhead = std::atomic_load_explicit(&head, std::memory_order_acquire,
+                                           SHARED_COMPATIBLE(headlk));
 
   // Cycle until we can "claim" a node for the dequeuer, with the oldhead
   // variable pointing to it.
@@ -201,26 +214,33 @@ T shared_queue<T>::dequeue()
       } // TODO optimization: else condition wait on tail != head
 
     auto newhead = oldhead->next.load(std::memory_order_acquire);
+    std::shared_ptr<node> newhead_shared(newhead, del);
     if (std::atomic_compare_exchange_weak_explicit(
-            &head, &oldhead, newhead, std::memory_order_release)) {
+            &head, &oldhead, newhead_shared, std::memory_order_release,
+            std::memory_order_relaxed, SHARED_COMPATIBLE(headlk))) {
       // We have claimed oldhead successfully, but it could be invalid
       // (if the queue was empty and one insert occured)
       if (oldhead->val.valid())
         break;
     }
+    // If we failed, we need to make sure to toggle off deletion as
+    // newhead_shared will go out of scope.
+    ToggleDeleter* actual_del = std::get_deleter<ToggleDeleter>(newhead_shared);
+    actual_del->enabled = false;
   }
 
-  return std::move(*oldtail->val.get());
+  return std::move(*oldhead->val.get());
 }
 
 // Requires no operations are active on the queue
 template<typename T>
 std::ostream& operator<<(std::ostream& o, const shared_queue<T>& q) {
   auto tail = std::atomic_load_explicit(&q.tail, std::memory_order_relaxed);
-  auto head = std::atomic_load_explicit(&q.head, std::memory_order_acquire);
+  auto head = std::atomic_load_explicit(&q.head, std::memory_order_acquire,
+                                        SHARED_COMPATIBLE(q.headlk));
 
   o << "[";
-  if (head == tail) {
+  if (head.get() == tail) {
     if (head->val.valid())
       o << *head->val.get();
     return o << "]";

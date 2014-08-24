@@ -21,12 +21,10 @@ class queue {
   // Calling enqueue/dequeue when the queue is full/empty
   // will result in waiting for the queue to not be empty.
   // In the case of one thread, it makes one should check full()/empty().
-  virtual void enqueue(const T&) = 0;
-  virtual void enqueue(T&&) = 0;
+  virtual void enqueue(T) = 0;
   virtual T dequeue() = 0;
   // "try" methods will throw in case queue is full/empty.
-  virtual void try_enqueue(const T&) = 0;
-  virtual void try_enqueue(T&&) = 0;
+  virtual void try_enqueue(T) = 0;
   virtual T try_dequeue() = 0;
 };
 

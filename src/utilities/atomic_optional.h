@@ -44,7 +44,7 @@ class atomic_optional {
   bool invalidate();
 
  private:
-  bool initialized;
+  std::atomic<bool> initialized;
   char store[sizeof(T)];
 };
 
