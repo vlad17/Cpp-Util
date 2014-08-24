@@ -12,15 +12,25 @@
  * on an atomic shared_ptr, the safe_ptr, which may not be.
  */
 
-#ifndef QUEUES_SHARED_QUEUE_H
-#define QUEUES_SHARED_QUEUE_H
+// For now, only clang 3.4 with libc++ can support std::atomic_... operations
+// on shared_ptrs
+#if defined(__clang__) && __clang_major__ > 3 || \
+  (__clang_major__ == 3 && __clang_minor__ >= 4)
+#define QUEUES_SHARED_QUEUE_DEFINED 1
+#else
+#define QUEUES_SHARED_QUEUE_DEFINED 0
+#define QUEUES_SHARED_QUEUE_H_
+#endif
+
+#ifndef QUEUES_SHARED_QUEUE_H_
+#define QUEUES_SHARED_QUEUE_H_
 
 #include <atomic>
 #include <memory>
 #include <ostream>
 #include <stdexcept>
 
-#include "queues/mqueue.h"
+#include "queues/queue.h"
 #include "utilities/atomic_optional.h"
 
 // TODO: potential optimization - put test-and-CAS for every CAS
@@ -35,7 +45,7 @@ std::ostream& operator<<(std::ostream&, const shared_queue<T>&);
 // The queue will never block on enqueue operations. The queue
 // will block dequeing threads if empty. "try" methods never block.
 template<typename T>
-class shared_queue : public mqueue<T> {
+class shared_queue : public queue<T> {
  private:
   class node : {
     node() : next(nullptr), val() {}

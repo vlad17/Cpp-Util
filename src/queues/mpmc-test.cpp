@@ -28,13 +28,19 @@ minstd_rand0 gen(SEED);
 template<template<typename> class T>
 void unit_test();
 
+template<template<typename> class T>
+void test_multithreaded();
+
 void test_main() {
   cout << "Queue Test..." << endl;
   // performance comparison here TODO
-  cout << "\nLock Free Queue" << endl;
-  unit_test<lfqueue>();
-  // cout << "\nAnother Queue" << endl; TODO
-  test_multithreaded();
+#if QUEUES_SHARED_QUEUE_DEFINED
+  cout << "\nShared Queue" << endl;
+  cout << "\tUnit testing:" << endl;
+  unit_test<shared_queue>();
+  cout << "\n\tMultithreaded test:" << endl;
+  test_multithreaded<shared_queue>();
+#endif
 }
 
 void start(const string& s) {
@@ -105,8 +111,6 @@ void unit_test() {
   complete("...........Success!");
 }
 
-// TODO tempalte template
 void test_multithreaded() {
-  lfqueue<int> x;
-  vector<int> v;
+  // TODO
 }

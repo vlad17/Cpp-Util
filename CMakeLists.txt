@@ -3,7 +3,9 @@ project(Cpp_Util)
 
 # Compilation options
 
-set(CMAKE_CXX_COMPILER g++)
+if(NOT ${CMAKE_CXX_COMPILER})
+  set(CMAKE_CXX_COMPILER g++)
+endif()
 set(GENERAL_FLAGS "-Wall -Wextra -std=c++11 -pthread -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-ggdb -O0 ${GENERAL_FLAGS}")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG ${GENERAL_FLAGS}")

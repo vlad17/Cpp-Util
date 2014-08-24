@@ -23,13 +23,13 @@ template<typename T>
 class atomic_optional {
  public:
   // Constructors
-  optional(); // does not default-initialize T
-  optional(T&& rval);
-  ~optional();
+  atomic_optional(); // does not default-initialize T
+  atomic_optional(T&& rval);
+  ~atomic_optional();
 
   // Assignment operators
-  optional& operator=(const optional&) = delete;
-  optional& operator=(optional&& other) = delete;
+  atomic_optional& operator=(const atomic_optional&) = delete;
+  atomic_optional& operator=(atomic_optional&& other) = delete;
 
   // Get pointer to location of stored optional object.
   // Value of T may be undefined if not valid.

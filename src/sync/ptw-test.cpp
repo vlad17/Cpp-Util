@@ -3,10 +3,10 @@
  * ptw-test.cpp
  * 2014-06-22
  *
- * Defines tests for pthreads wrappers
+ * Defines tests for pthread wrappers
  */
 
-#include "pthread_wrappers/rwlock.hpp"
+#include "sync/rwlock.hpp"
 
 #include <iostream>
 #include <random>
