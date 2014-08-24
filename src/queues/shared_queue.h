@@ -152,7 +152,7 @@ bool shared_queue<T>::empty() {
   auto oldhead = std::atomic_load_explicit(&head, std::memory_order_relaxed,
                                            SHARED_COMPATIBLE(headlk));
   auto oldtail = tail.load(std::memory_order_relaxed);
-  return oldhead.get() != oldtail || oldhead->val.valid();
+  return oldhead.get() == oldtail && !oldhead->val.valid();
 }
 
 template<typename T>
@@ -176,7 +176,7 @@ void shared_queue<T>::enqueue(node* n) noexcept {
 
   // Make sure that by the time we are finished enqueuing, a dequeuer
   // is able to remove the head.
-  tail.compare_exchange_strong(oldtail, newnext, std::memory_order_relaxed,
+  tail.compare_exchange_strong(oldtail, n, std::memory_order_relaxed,
                                std::memory_order_relaxed);
 }
 
@@ -210,7 +210,7 @@ T shared_queue<T>::dequeue()
     while (oldhead.get() == oldtail)
       if (oldhead->val.valid()) {
         if (oldhead->val.invalidate())
-          break;
+          goto claimed;
       } // TODO optimization: else condition wait on tail != head
 
     auto newhead = oldhead->next.load(std::memory_order_acquire);
@@ -221,7 +221,7 @@ T shared_queue<T>::dequeue()
       // We have claimed oldhead successfully, but it could be invalid
       // (if the queue was empty and one insert occured)
       if (oldhead->val.valid())
-        break;
+        goto claimed;
     }
     // If we failed, we need to make sure to toggle off deletion as
     // newhead_shared will go out of scope.
@@ -229,6 +229,7 @@ T shared_queue<T>::dequeue()
     actual_del->enabled = false;
   }
 
+claimed:
   return std::move(*oldhead->val.get());
 }
 
@@ -239,6 +240,7 @@ std::ostream& operator<<(std::ostream& o, const shared_queue<T>& q) {
   auto head = std::atomic_load_explicit(&q.head, std::memory_order_acquire,
                                         SHARED_COMPATIBLE(q.headlk));
 
+
   o << "[";
   if (head.get() == tail) {
     if (head->val.valid())
@@ -246,10 +248,10 @@ std::ostream& operator<<(std::ostream& o, const shared_queue<T>& q) {
     return o << "]";
   }
 
-  o << "[";
   for (auto i = head.get(); i != tail;
        i = i->next.load(std::memory_order_acquire))
-    o << *i->val.get() << ", ";
+    if (i->val.valid())
+      o << *i->val.get() << ", ";
   return o << *tail->val.get() << "]";
 }
 

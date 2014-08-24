@@ -64,7 +64,16 @@ bool same(X& x, const vector<int>& vec) {
   vecstream << "]";
   stringstream xstream;
   xstream << x;
+  string xstr = xstream.str();
+  string vstr = vecstream.str();
   return vecstream.str() == xstream.str();
+}
+
+template<class X>
+string as_string(const X& x) {
+  stringstream sstr;
+  sstr << x;
+  return sstr.str();
 }
 
 template<template<typename> class T>
@@ -73,36 +82,37 @@ void unit_test() {
   start("Insert 0..9");
   for(int i = 0; i < 10; ++i)
     t.enqueue(i);
-  ASSERT(same(t, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
+  ASSERT(same(t, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}), "\n\t[t = " + as_string(t));
   ASSERT(!t.empty());
   complete();
   start("Remove 0..9");
   for(int i = 0; i < 10; ++i)
     ASSERT(t.dequeue() == i, "queue not FIFO");
-  ASSERT(same(t, {}));
+  ASSERT(same(t, {}), "\n\t[t = " + as_string(t));
   ASSERT(t.empty());
   complete();
   start("Insert 0..9");
   for(int i = 0; i < 10; ++i)
     t.enqueue(i);
-  ASSERT(same(t, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
+  ASSERT(same(t, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}), "\n\t[t = " + as_string(t));
   ASSERT(!t.empty());
   complete();
   start("Remove 0..4");
   for(int i = 0; i < 5; ++i)
     ASSERT(t.dequeue() == i, "queue not FIFO (partial remove)");
-  ASSERT(same(t, {9, 8, 7, 6, 5}));
+  ASSERT(same(t, {5, 6, 7, 8, 9}), "\n\t(t = " + as_string(t) + ")");
   ASSERT(!t.empty());
   complete();
   start("Insert 10..14");
   for(int i = 10; i < 15; ++i)
     t.enqueue(i);
-  ASSERT(same(t, {5, 6, 7, 8, 9, 10, 11, 12, 13, 14}));
+  ASSERT(same(t, {5, 6, 7, 8, 9, 10, 11, 12, 13, 14}),
+         "\n\t[t = " + as_string(t));
   complete();
   start("Remove 5..14");
   for(int i = 5; i < 15; ++i)
     ASSERT(t.dequeue() == i, "queue not FIFO (remove after being empty)");
-  ASSERT(same(t, {}));
+  ASSERT(same(t, {}), "\n\t[t = " + as_string(t));
   ASSERT(t.empty());
   complete();
   start("");
