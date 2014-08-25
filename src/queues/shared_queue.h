@@ -20,9 +20,9 @@
 #include <ostream>
 #include <stdexcept>
 
+#include "sync/atomic_shared.h"
 #include "queues/queue.h"
 #include "utilities/atomic_optional.h"
-#include "utilities/shared_atomic.h"
 
 template<typename T>
 class shared_queue;
@@ -52,10 +52,8 @@ class shared_queue : public queue<T> {
   // each dequeuer take a local copy which ensures that the node
   // is not deleted by other dequeuers (so no new node will
   // have the same address as)
-  std::shared_ptr<node> head;
+  atomic_shared_ptr<node> head;
   std::atomic<node*> tail;
-
-  SHARED_COMPATIBLE_LOCK(headlk);
 
   void enqueue(node* n) noexcept;
 
@@ -63,8 +61,7 @@ class shared_queue : public queue<T> {
   shared_queue() {
     auto sptr = std::make_shared<node>();
     tail.store(sptr.get(), std::memory_order_relaxed);
-    std::atomic_store_explicit(&head, sptr, std::memory_order_relaxed,
-                               SHARED_COMPATIBLE(headlk));
+    std::atomic_store_explicit(&head, sptr, std::memory_order_relaxed);
   }
   virtual ~shared_queue() {}
   // Oberservers
@@ -149,8 +146,7 @@ class shared_queue : public queue<T> {
 
 template<typename T>
 bool shared_queue<T>::empty() {
-  auto oldhead = std::atomic_load_explicit(&head, std::memory_order_relaxed,
-                                           SHARED_COMPATIBLE(headlk));
+  auto oldhead = std::atomic_load_explicit(&head, std::memory_order_relaxed);
   auto oldtail = tail.load(std::memory_order_relaxed);
   return oldhead.get() == oldtail && !oldhead->val.valid();
 }
@@ -200,8 +196,7 @@ T shared_queue<T>::dequeue()
   // pointer is the same as one in the atomic tail register,
   // then the value pointed to by the local pointer is the same as
   // it was when the local pointer was last written to.
-  auto oldhead = std::atomic_load_explicit(&head, std::memory_order_acquire,
-                                           SHARED_COMPATIBLE(headlk));
+  auto oldhead = std::atomic_load_explicit(&head, std::memory_order_acquire);
 
   // Cycle until we can "claim" a node for the dequeuer, with the oldhead
   // variable pointing to it.
@@ -217,7 +212,7 @@ T shared_queue<T>::dequeue()
     std::shared_ptr<node> newhead_shared(newhead, del);
     if (std::atomic_compare_exchange_weak_explicit(
             &head, &oldhead, newhead_shared, std::memory_order_release,
-            std::memory_order_relaxed, SHARED_COMPATIBLE(headlk))) {
+            std::memory_order_relaxed)) {
       // We have claimed oldhead successfully, but it could be invalid
       // (if the queue was empty and one insert occured)
       if (oldhead->val.valid())
@@ -237,8 +232,7 @@ claimed:
 template<typename T>
 std::ostream& operator<<(std::ostream& o, const shared_queue<T>& q) {
   auto tail = std::atomic_load_explicit(&q.tail, std::memory_order_relaxed);
-  auto head = std::atomic_load_explicit(&q.head, std::memory_order_acquire,
-                                        SHARED_COMPATIBLE(q.headlk));
+  auto head = std::atomic_load_explicit(&q.head, std::memory_order_acquire);
 
 
   o << "[";
