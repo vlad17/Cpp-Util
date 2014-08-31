@@ -27,7 +27,7 @@ template<class T>
 class locked_shared_ptr : public std::shared_ptr<T> {
  public:
   typedef std::shared_ptr<T> base;
-  using base::base;
+  // TODO eventually add shared_ptr constructors.
   lock_type& lock() const { return *lock_; }
   // No locked_shared_ptr-to-locked_shared_ptr copies
   // for now. Assignment, etc. may be extended in the future
@@ -97,6 +97,9 @@ namespace std {
       _sync_atomic_shared_internal::locked_shared_ptr<T>* p,
       shared_ptr<T> r, memory_order) {
     _sync_atomic_shared_internal::lock_guard lk(p->lock());
+    // (**) Careful - *p = move(r) translates as
+    // *p = locked_shared_ptr(move(r)), which gives
+    // p a new mutex!
     p->swap(r);
   }
 
@@ -105,7 +108,7 @@ namespace std {
       _sync_atomic_shared_internal::locked_shared_ptr<T>* p,
       shared_ptr<T> r, memory_order) {
     p->lock().lock();
-    p->swap(r);
+    p->swap(r); // see (**) above
     p->lock().unlock();
     return r;
   }
@@ -117,7 +120,7 @@ namespace std {
       memory_order, memory_order) {
     _sync_atomic_shared_internal::lock_guard lk(p->lock());
     if (*p == *expected) {
-      *p = move(desired);
+      p->swap(desired); // see (**) above
       return true;
     }
     *expected = *p;
@@ -130,7 +133,7 @@ namespace std {
       shared_ptr<T>* expected, shared_ptr<T> desired,
       memory_order success, memory_order failure) {
     return atomic_compare_exchange_strong_explicit(
-        p, expected, desired, success, failure);
+      p, expected, move(desired), success, failure);
   }
 
 } // namespace std

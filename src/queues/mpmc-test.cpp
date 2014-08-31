@@ -6,8 +6,10 @@
  * Defines tests for mpmc synchronoized queues.
  */
 
-#define QUEUES_SHARED_QUEUE_H_PRINT_DEBUG_STRING
-
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <future>
 #include <iostream>
 #include <iomanip>
 #include <random>
@@ -30,6 +32,8 @@ void unit_test();
 
 template<template<typename> class T>
 void test_multithreaded();
+
+vector<int> read_strvec(string);
 
 void test_main() {
   cout << "Queue Test..." << endl;
@@ -119,8 +123,148 @@ void unit_test() {
   complete("...........Success!");
 }
 
+// reads in [.., .., .., ..] format
+vector<int> read_strvec(string s) {
+  replace(s.begin(), s.end(), ',', ' ');
+  s.pop_back();
+  istringstream in(s);
+  in.get();
+  vector<int> out;
+  while (!in.eof()) {
+    int x;
+    in >> x;
+    out.push_back(x);
+  }
+  return out;
+}
+
+bool in_range(int i, int lo, int hi) {
+  return lo <= i && i < hi;
+}
+
 template<template<typename> class T>
 void test_multithreaded() {
-  // TODO
-  cout << "Test not yet made.\n";
+  static const int kNumEnqueuers = 10;
+  static const int kItemsPerEnqueuer = 2000;
+  cout << "Testing concurrent enqueues and validity, "
+       << kNumEnqueuers << " enqueuers x " << kItemsPerEnqueuer << " items"
+       << endl;
+
+  // Have each enqueuer fill with a unique # of items, then check that
+  // they're all present (and queue's not empty). Relies on the fact
+  // that the queue's safe to traverse so long as no dequeue operation
+  // is going on.
+
+  // Gives unique interval for concurrent inserters.
+  auto sme = [&](int idx) -> tuple<int, int, int> {
+          int start = kItemsPerEnqueuer * idx;
+          int mid = start + kItemsPerEnqueuer / 2;
+          int end = start + kItemsPerEnqueuer;
+          return make_tuple(start, mid, end);
+  };
+  start("concurrent inserts");
+
+  atomic<int> cdl(kNumEnqueuers); // todo replace with a countdown latch
+  T<int> testq;
+  ASSERT(testq.empty());
+  typedef tuple<vector<int>, vector<int>, vector<int> > threevec;
+  vector<future<threevec> > futs;
+  for (int i = 0; i < kNumEnqueuers; ++i)
+    futs.push_back(async(launch::async,
+                         [&](int idx) -> threevec {
+          --cdl;
+          while (cdl.load())
+            this_thread::sleep_for(chrono::milliseconds(5));
+          int start, mid, end;
+          tie(start, mid, end) = sme(idx);
+          auto before = read_strvec(as_string(testq));
+
+          for (int i = start; i < mid; ++i)
+            testq.enqueue(i);
+          auto half = read_strvec(as_string(testq));
+
+          for (int i = mid; i < end; ++i)
+            testq.enqueue(i);
+          auto after = read_strvec(as_string(testq));
+
+          return make_tuple(before, half, after);
+        }, i));
+
+  for (int i = 0; i < kNumEnqueuers; ++i) {
+    vector<int> before, half, after;
+    tie(before, half, after) = futs[i].get();
+    int start, mid, end;
+    tie(start, mid, end) = sme(i);
+
+    for (int j : before)
+      ASSERT(!in_range(j, start, end));
+
+    int current = start;
+    for (int j : half)
+      if (in_range(j, start, end))
+        ASSERT(j == current++, "Expected fifo order ("
+               << j << " != " << (current - 1) << ")");
+    ASSERT(current == mid, "exactly half should be present ["
+           << start << ", " << mid << ")");
+
+    current = start;
+    for (int j : after)
+      if (in_range(j, start, end))
+        ASSERT(j == current++, "Expected fifo order ("
+               << j << " != " << (current - 1) << ")");
+    ASSERT(current == end, "all should be present ["
+           << start << ", " << end << ")");
+  }
+
+  complete();
+
+  start("");
+  complete("...........Success!");
+
+  // Keep the same constants so we have exactly as many items removed
+  // as were put in (don't make dequeuers dequeue empty)
+  static const int kNumDequeuers = kNumEnqueuers;
+  static const int kItemsPerDequeuer = kItemsPerEnqueuer;
+  cout << "Testing concurrent dequeues and validity, "
+       << kNumDequeuers << " dequeuers x " << kItemsPerDequeuer << " items"
+       << endl;
+  start("concurrent pops");
+
+  // Dequeuers just check that they read everything in ascending order
+  // (not totally, but within the resolution of each enqueuer).
+  vector<future<void> > dfuts;
+  cdl.store(kNumDequeuers);
+  for (int i = 0; i < kNumDequeuers; ++i)
+    dfuts.push_back(async(launch::async, [&]() {
+          --cdl;
+          while (cdl.load())
+            this_thread::sleep_for(chrono::milliseconds(5));
+
+          int latest[kNumEnqueuers];
+          fill(latest, latest + kNumEnqueuers, -1);
+          vector<int> seen; // save results in vector to encourage contention.
+          seen.reserve(kItemsPerDequeuer);
+
+          for (int j = 0; j < kItemsPerDequeuer; ++j)
+            seen.push_back(testq.dequeue());
+
+          for (int val : seen) {
+            int enqueuer = val / kItemsPerEnqueuer;
+            ASSERT(val >= 0 && enqueuer < kNumEnqueuers, "Value " << val
+                   << " could not have been enqueued (" << kNumEnqueuers
+                   << " enqueuers)");
+            ASSERT(latest[enqueuer] < val, "Expected fifo order, saw "
+                   << latest[enqueuer] << " before " << val);
+            latest[enqueuer] = val;
+          }
+        }));
+  for (auto& fut : dfuts)
+    fut.get();
+
+  complete();
+
+  // Dequeued all, should be mpty
+  start("Testing empty");
+  ASSERT(testq.empty());
+  complete();
 }

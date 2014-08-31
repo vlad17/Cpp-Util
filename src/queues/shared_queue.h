@@ -19,6 +19,7 @@
 #include <memory>
 #include <ostream>
 #include <stdexcept>
+#include <queue>
 
 #include "sync/atomic_shared.h"
 #include "queues/queue.h"
@@ -179,12 +180,14 @@ void shared_queue<T>::enqueue(node* n) noexcept {
 template<typename T>
 T shared_queue<T>::dequeue()
 {
+  static std::atomic<int> deleted(0);
   // Specialized destructor shared pointer for local shared pointers
   // which toggles on the actual destruction (no need for atomics
   // here becuase of other memory barriers.
   struct ToggleDeleter {
     void operator()(node* n) {
-      if (enabled) delete n;
+      if (enabled)
+        delete n;
     }
     bool enabled;
   };
@@ -228,7 +231,7 @@ claimed:
   return std::move(*oldhead->val.get());
 }
 
-// Requires no operations are active on the queue
+// Requires dequeuers are operating on the queue.
 template<typename T>
 std::ostream& operator<<(std::ostream& o, const shared_queue<T>& q) {
   auto tail = std::atomic_load_explicit(&q.tail, std::memory_order_relaxed);
