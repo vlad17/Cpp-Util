@@ -177,6 +177,10 @@ void shared_queue<T>::enqueue(node* n) noexcept {
                                std::memory_order_relaxed);
 }
 
+// TODO remove with condition variable
+#include <chrono>
+#include <thread>
+
 template<typename T>
 T shared_queue<T>::dequeue()
 {
@@ -189,7 +193,7 @@ T shared_queue<T>::dequeue()
       if (enabled)
         delete n;
     }
-    bool enabled;
+    bool enabled; // todo initializer
   };
   ToggleDeleter del;
   del.enabled = true;
@@ -204,12 +208,21 @@ T shared_queue<T>::dequeue()
   // Cycle until we can "claim" a node for the dequeuer, with the oldhead
   // variable pointing to it.
   while (true) {
+    // We can't go ahead of tail, even if we see head->next != nullptr, because
+    // enqueuers rely on that node's validity.
     auto oldtail = tail.load(std::memory_order_relaxed);
-    while (oldhead.get() == oldtail)
+    while (oldhead.get() == oldtail) {
       if (oldhead->val.valid()) {
         if (oldhead->val.invalidate())
           goto claimed;
-      } // TODO optimization: else condition wait on tail != head
+      } else {
+        // TODO optimization: else condition wait on tail != head
+        std::this_thread::sleep_for(std::chrono::nanoseconds(5));
+      }
+      // Some enqueues may have occured, so we re-check the tail
+      // (and break out the loop if multiple enqueues occured).
+      oldtail = tail.load(std::memory_order_relaxed);
+    }
 
     auto newhead = oldhead->next.load(std::memory_order_acquire);
     std::shared_ptr<node> newhead_shared(newhead, del);
@@ -250,7 +263,6 @@ template<typename T>
 std::ostream& operator<<(std::ostream& o, const shared_queue<T>& q) {
   auto tail = std::atomic_load_explicit(&q.tail, std::memory_order_relaxed);
   auto head = std::atomic_load_explicit(&q.head, std::memory_order_acquire);
-
 
   o << "[";
   if (head.get() == tail) {

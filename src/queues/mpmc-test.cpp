@@ -37,7 +37,6 @@ vector<int> read_strvec(string);
 
 void test_main() {
   cout << "Queue Test..." << endl;
-  // performance comparison here TODO
   cout << "\nShared Queue" << endl;
   cout << "\tUnit testing:" << endl;
   unit_test<shared_queue>();
@@ -45,8 +44,9 @@ void test_main() {
   test_multithreaded<shared_queue>();
 }
 
+// TODO wrap s if longer that 40 chars (and adjust below test names)
 void start(const string& s) {
-  cout << '\t' << left << setw(25);
+  cout << '\t' << left << setw(40);
   cout << s;
   cout.flush();
 }
@@ -119,6 +119,13 @@ void unit_test() {
   ASSERT(same(t, {}), "\n\t[t = " + as_string(t));
   ASSERT(t.empty());
   complete();
+  start("Non-empty delete (valgrind)");
+  {
+    T<int> t;
+    for (int i = 0; i < 10; ++i)
+      t.enqueue(i);
+  }
+  complete();
   start("");
   complete("...........Success!");
 }
@@ -131,7 +138,7 @@ vector<int> read_strvec(string s) {
   in.get();
   vector<int> out;
   while (!in.eof()) {
-    int x;
+    int x = 0;
     in >> x;
     out.push_back(x);
   }
@@ -142,11 +149,24 @@ bool in_range(int i, int lo, int hi) {
   return lo <= i && i < hi;
 }
 
+tuple<int, int, int> interval_mid(int idx, int per) {
+  int start = per * idx;
+  int mid = start + per / 2;
+  int end = start + per;
+  return make_tuple(start, mid, end);
+}
+
+tuple<int, int> interval(int idx, int per) {
+  int start = per * idx;
+  int end = start + per;
+  return make_tuple(start, end);
+}
+
 template<template<typename> class T>
 void test_multithreaded() {
-  static const int kNumEnqueuers = 3; //10;
-  static const int kItemsPerEnqueuer = 3; //2000;
-  cout << "Testing concurrent enqueues and validity, "
+  static const int kNumEnqueuers = 10;
+  static const int kItemsPerEnqueuer = 2000;
+  cout << "\tTesting concurrent enqueues and validity, "
        << kNumEnqueuers << " enqueuers x " << kItemsPerEnqueuer << " items"
        << endl;
 
@@ -156,12 +176,6 @@ void test_multithreaded() {
   // is going on.
 
   // Gives unique interval for concurrent inserters.
-  auto sme = [&](int idx) -> tuple<int, int, int> {
-          int start = kItemsPerEnqueuer * idx;
-          int mid = start + kItemsPerEnqueuer / 2;
-          int end = start + kItemsPerEnqueuer;
-          return make_tuple(start, mid, end);
-  };
   start("concurrent inserts");
 
   atomic<int> cdl(kNumEnqueuers); // todo replace with a countdown latch
@@ -176,7 +190,7 @@ void test_multithreaded() {
           while (cdl.load())
             this_thread::sleep_for(chrono::milliseconds(5));
           int start, mid, end;
-          tie(start, mid, end) = sme(idx);
+          tie(start, mid, end) = interval_mid(idx, kItemsPerEnqueuer);
           auto before = read_strvec(as_string(testq));
 
           for (int i = start; i < mid; ++i)
@@ -194,7 +208,7 @@ void test_multithreaded() {
     vector<int> before, half, after;
     tie(before, half, after) = futs[i].get();
     int start, mid, end;
-    tie(start, mid, end) = sme(i);
+    tie(start, mid, end) = interval_mid(i, kItemsPerEnqueuer);
 
     for (int j : before)
       ASSERT(!in_range(j, start, end));
@@ -218,14 +232,11 @@ void test_multithreaded() {
 
   complete();
 
-  start("");
-  complete("...........Success!");
-
   // Keep the same constants so we have exactly as many items removed
   // as were put in (don't make dequeuers dequeue empty)
   static const int kNumDequeuers = kNumEnqueuers;
   static const int kItemsPerDequeuer = kItemsPerEnqueuer;
-  cout << "Testing concurrent dequeues and validity, "
+  cout << "\tTesting concurrent dequeues and validity, "
        << kNumDequeuers << " dequeuers x " << kItemsPerDequeuer << " items"
        << endl;
   start("concurrent pops");
@@ -258,6 +269,7 @@ void test_multithreaded() {
             latest[enqueuer] = val;
           }
         }));
+
   for (auto& fut : dfuts)
     fut.get();
 
@@ -267,4 +279,82 @@ void test_multithreaded() {
   start("Testing empty");
   ASSERT(testq.empty());
   complete();
+
+  static const int kRandomizedNumEnqueuers = 3;
+  static const int kRandomizedNumDequeuers = 4;
+  static const int kInterval = 10;
+  static const int kDesiredRandomizedNum = 1000;
+  static const int kRandomizedNum =
+    (kDesiredRandomizedNum / kRandomizedNumEnqueuers) * kRandomizedNumEnqueuers;
+  cout << "\tEnqueue/Dequeue testing (pause after enqueuing " << kInterval
+       << " to encourage dequeuers),\n"
+       << "\t\tenqueue: " << kRandomizedNumEnqueuers << "\n"
+       << "\t\tdequeue: " << kRandomizedNumDequeuers << " (test empty edge case)\n"
+       << "\t\tNumber of items: " << kRandomizedNum << endl;
+  start("Enqueue/dequeue");
+
+  cdl.store(kRandomizedNumEnqueuers + kRandomizedNumDequeuers);
+
+  vector<future<void> > refuts;
+  const static int kRandomizedPerEnqueuer = kRandomizedNum / kRandomizedNumEnqueuers;
+  for (int i = 0; i < kRandomizedNumEnqueuers; ++i)
+    refuts.push_back(async(launch::async, [&](int idx) {
+          --cdl;
+          while (cdl.load())
+            this_thread::sleep_for(chrono::milliseconds(5));
+
+          int start, end;
+          tie(start, end) = interval(idx, kRandomizedPerEnqueuer);
+          for (int j = start; j < end; ++j) {
+            testq.enqueue(j);
+            if (j % kInterval)
+              this_thread::sleep_for(chrono::nanoseconds(10));
+          }
+        }, i));
+
+  vector<future<void > > rdfuts;
+  const static int kRandomizedPerDequeuer = kRandomizedNum / kRandomizedNumDequeuers;
+  for (int i = 0; i < kRandomizedNumDequeuers; ++i)
+    rdfuts.push_back(async(launch::async, [&]() {
+          --cdl;
+          while (cdl.load())
+            this_thread::sleep_for(chrono::milliseconds(5));
+
+          int latest[kRandomizedNumEnqueuers];
+          fill(latest, latest + kRandomizedNumEnqueuers, -1);
+          vector<int> seen; // save results in vector to encourage contention.
+          seen.reserve(kRandomizedPerDequeuer);
+
+          for (int j = 0; j < kRandomizedPerDequeuer; ++j)
+            seen.push_back(testq.dequeue());
+
+          for (int val : seen) {
+            int enqueuer = val / kRandomizedPerEnqueuer;
+            ASSERT(val >= 0 && enqueuer < kRandomizedNumEnqueuers, "Value " << val
+                   << " could not have been enqueued (" << kRandomizedNumEnqueuers
+                   << " enqueuers)");
+            ASSERT(latest[enqueuer] < val, "Expected fifo order, saw "
+                   << latest[enqueuer] << " before " << val);
+            latest[enqueuer] = val;
+          }
+        }));
+
+  // Leftovers
+  int dequeued = kRandomizedPerDequeuer * kRandomizedNumDequeuers;
+  for (int i = dequeued; i < kRandomizedNum; ++i)
+    testq.dequeue();
+
+  for (auto& fut : refuts)
+    fut.get();
+  for (auto& fut : rdfuts)
+    fut.get();
+
+  complete();
+
+  start("Test empty");
+  ASSERT(testq.empty());
+  complete();
+
+  start("");
+  complete("...........Success!");
 }

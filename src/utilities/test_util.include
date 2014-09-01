@@ -23,7 +23,7 @@ class test_error : public std::runtime_error {
 #define __TEST_UTIL_INCLUDE_ASSERT(expr, msg) do { \
           if (!(expr)) { \
             std::stringstream sstr; \
-            sstr << "Expr `" << std::string(#expr) << "` failed"; \
+            sstr << "\nExpr `" << std::string(#expr) << "` failed"; \
             sstr << msg; \
             throw test_error(sstr.str()); \
           } \
