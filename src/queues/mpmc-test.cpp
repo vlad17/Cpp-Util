@@ -1,7 +1,7 @@
 /*
  * Vladimir Feinberg
  * mpmc-test.cpp
- * 2014-08-15
+ * 2014-08-31
  *
  * Defines tests for mpmc synchronoized queues.
  */

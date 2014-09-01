@@ -82,8 +82,8 @@ namespace util
         class optional
         {
         private:
-                bool initialized; // boolean tracks current state (necessary for moving)
                 char store[sizeof(T)]; // store object as a sequence of bytes explicitly
+                bool initialized; // boolean tracks current state (necessary for moving)
         public:
                 // Constructors
                 optional(); // does not default-initialize

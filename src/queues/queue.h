@@ -16,8 +16,8 @@ class queue {
  public:
   virtual ~queue() {}
   // Observers
-  virtual bool full() = 0;
-  virtual bool empty() = 0;
+  virtual bool full() const = 0;
+  virtual bool empty() const = 0;
   // Calling enqueue/dequeue when the queue is full/empty
   // will result in waiting for the queue to not be empty.
   // In the case of one thread, it makes one should check full()/empty().
