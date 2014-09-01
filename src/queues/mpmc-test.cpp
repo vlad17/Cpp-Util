@@ -144,8 +144,8 @@ bool in_range(int i, int lo, int hi) {
 
 template<template<typename> class T>
 void test_multithreaded() {
-  static const int kNumEnqueuers = 10;
-  static const int kItemsPerEnqueuer = 2000;
+  static const int kNumEnqueuers = 3; //10;
+  static const int kItemsPerEnqueuer = 3; //2000;
   cout << "Testing concurrent enqueues and validity, "
        << kNumEnqueuers << " enqueuers x " << kItemsPerEnqueuer << " items"
        << endl;

@@ -64,7 +64,7 @@ class shared_queue : public queue<T> {
     tail.store(sptr.get(), std::memory_order_relaxed);
     std::atomic_store_explicit(&head, sptr, std::memory_order_relaxed);
   }
-  virtual ~shared_queue() {}
+  virtual ~shared_queue();
   // Oberservers
   // TODO is_lock_free method
   virtual bool full() { return false; }
@@ -220,15 +220,29 @@ T shared_queue<T>::dequeue()
       // (if the queue was empty and one insert occured)
       if (oldhead->val.valid())
         goto claimed;
+    } else {
+      // If we failed, we need to make sure to toggle off deletion as
+      // newhead_shared will go out of scope.
+      ToggleDeleter* actual_del = std::get_deleter<ToggleDeleter>(newhead_shared);
+      actual_del->enabled = false;
     }
-    // If we failed, we need to make sure to toggle off deletion as
-    // newhead_shared will go out of scope.
-    ToggleDeleter* actual_del = std::get_deleter<ToggleDeleter>(newhead_shared);
-    actual_del->enabled = false;
   }
 
 claimed:
   return std::move(*oldhead->val.get());
+}
+
+// As is the normal assumption, the queue should not be in use
+// by other threads.
+template<typename T>
+shared_queue<T>::~shared_queue() {
+  auto oldhead = std::atomic_load_explicit(&head, std::memory_order_acquire);
+  for (auto i = oldhead->next.load(std::memory_order_acquire);
+       i != nullptr;) {
+    auto prev = i;
+    i = i->next.load(std::memory_order_acquire);
+    delete prev;
+  }
 }
 
 // Requires dequeuers are operating on the queue.
