@@ -9,21 +9,23 @@
  * the advice in The Art of Multiprocessor Programming.
  *
  * For the most part the queue's lock free, but it relies
- * on an atomic shared_ptr, which may not be.
+ * on an atomic shared_ptr, which may not be (the condition
+ * variable for empty queues and its mutex don't coun't).
  */
 
 #ifndef QUEUES_SHARED_QUEUE_H_
 #define QUEUES_SHARED_QUEUE_H_
 
 #include <atomic>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <ostream>
-#include <stdexcept>
-#include <queue>
 
 #include "sync/atomic_shared.h"
 #include "queues/queue.h"
 #include "utilities/atomic_optional.h"
+#include "utilities/optional.h"
 
 template<typename T>
 class shared_queue;
@@ -51,20 +53,29 @@ class shared_queue : public queue<T> {
   // each dequeuer take a local copy which ensures that the node
   // is not deleted by other dequeuers (so no new node will
   // have the same address as)
-  atomic_shared_ptr<node> head;
-  std::atomic<node*> tail;
+  atomic_shared_ptr<node> head_;
+  std::atomic<node*> tail_;
+
+  // Mutex and condition variable for blocked dequeuers waiting on
+  // the "empty" condition. Note
+  std::condition_variable empty_condition_;
+  std::mutex empty_mutex_;
+  // TODO optimization: only need a bool for empty, right?
+  std::atomic<size_t> insert_version_; // number enqueued
+  std::atomic<size_t> remove_version_; // number dequeued
 
   void enqueue(node* n) noexcept;
 
  public:
-  shared_queue() {
+  shared_queue() :
+    insert_version_(0), remove_version_(0) {
     auto sptr = std::make_shared<node>();
-    tail.store(sptr.get(), std::memory_order_relaxed);
-    std::atomic_store_explicit(&head, sptr, std::memory_order_relaxed);
+    tail_.store(sptr.get(), std::memory_order_relaxed);
+    std::atomic_store_explicit(&head_, sptr, std::memory_order_relaxed);
   }
   virtual ~shared_queue();
-  // Oberservers
-  bool is_lock_free() const;
+  // Oberservers - full() and empty() may not be very meaningful.
+  bool is_lock_free() const; // ignores the std::condition_variable
   virtual bool full() const { return false; }
   virtual bool empty() const;
   // Strong guarantee for enqueues
@@ -74,7 +85,7 @@ class shared_queue : public queue<T> {
   // Strong guarantee for dequeue - only move can throw
   // In addition, empty_error may be thrown for try_dequeue()
   virtual T dequeue();
-  virtual T try_dequeue() {throw std::runtime_error("Unsupported");}
+  virtual util::optional<T> try_dequeue();
   // For debugging. Prints [head ... tail]. Requires external locking
   // so that no operations occur on the queue.
   friend std::ostream& operator<< <>(std::ostream&, const shared_queue&);

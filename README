@@ -10,9 +10,7 @@ make -j
 make test
 
 TODO:
-        shared queue try_deque and try_* testing (unit + multithreaded)
-               for multithreaded try_*, just reuse old mt code and loop + wait.
-        add std::condition_variable to shared_queue, test (notify all if not empty, single if was), test perf gains
+        condition var in shared_queue - notify all vs notify one, other shared_queue optimizations
         rename every *.h to *.hpp
         namespace for individual libraries
         implement Countdown latch 

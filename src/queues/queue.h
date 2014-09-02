@@ -9,7 +9,7 @@
 #ifndef QUEUES_QUEUE_H_
 #define QUEUES_QUEUE_H_
 
-#include "queues/size_except.h"
+#include "utilities/optional.h"
 
 template<typename T>
 class queue {
@@ -23,9 +23,10 @@ class queue {
   // In the case of one thread, it makes one should check full()/empty().
   virtual void enqueue(T) = 0;
   virtual T dequeue() = 0;
-  // "try" methods will throw in case queue is full/empty.
+  // "try" methods don't block - enqueue returns false if full and
+  // dequeue returns an invalid (unconstructed) optional if empty.
   virtual void try_enqueue(T) = 0;
-  virtual T try_dequeue() = 0;
+  virtual util::optional<T> try_dequeue() = 0;
 };
 
 #endif /* QUEUES_QUEUE_H_ */

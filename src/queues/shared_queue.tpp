@@ -69,20 +69,23 @@
 
 template<typename T>
 bool shared_queue<T>::is_lock_free() const {
-  return std::atomic_is_lock_free(&head)
-    && tail.is_lock_free();
+  return std::atomic_is_lock_free(&head_)
+    && tail_.is_lock_free();
 }
 
 template<typename T>
 bool shared_queue<T>::empty() const {
-  auto oldhead = std::atomic_load_explicit(&head, std::memory_order_relaxed);
-  auto oldtail = tail.load(std::memory_order_relaxed);
-  return oldhead.get() == oldtail && !oldhead->val.valid();
+  // Give a "conservative" estimate, likely to say empty() is true,
+  // to prevent eager wakeups and contention, by reading insert version first.
+  auto enq = insert_version_.load(std::memory_order_relaxed);
+  auto deq = remove_version_.load(std::memory_order_relaxed);
+  // invariant: enq >= deq
+  return enq == deq;
 }
 
 template<typename T>
 void shared_queue<T>::enqueue(node* n) noexcept {
-  auto oldtail = tail.load(std::memory_order_relaxed);
+  auto oldtail = tail_.load(std::memory_order_relaxed);
   node* newnext = nullptr;
 
   // Require release semantics on node->next pointer - see documentation above
@@ -94,23 +97,23 @@ void shared_queue<T>::enqueue(node* n) noexcept {
     // if the CAS succeeds b/c it meant that right before the CAS the tail
     // was still oldtail, so its next could not have been deleted.
     // In the case it does not succeed, we don't care since we wipe newnext.
-    tail.compare_exchange_weak(oldtail, newnext, std::memory_order_relaxed,
-                               std::memory_order_relaxed);
+    tail_.compare_exchange_weak(oldtail, newnext, std::memory_order_relaxed,
+                                std::memory_order_relaxed);
     newnext = nullptr;
   }
 
   // Make sure that by the time we are finished enqueuing, a dequeuer
   // is able to remove the head.
-  tail.compare_exchange_strong(oldtail, n, std::memory_order_relaxed,
-                               std::memory_order_relaxed);
+  tail_.compare_exchange_strong(oldtail, n, std::memory_order_relaxed,
+                                std::memory_order_relaxed);
+
+  insert_version_.fetch_add(1, std::memory_order_relaxed);
+  // TODO optimization: if empty() check before notify?
+  empty_condition_.notify_one();
 }
 
-// TODO remove with condition variable
-#include <chrono>
-#include <thread>
-
 template<typename T>
-T shared_queue<T>::dequeue()
+util::optional<T> shared_queue<T>::try_dequeue()
 {
   static std::atomic<int> deleted(0);
   // Specialized destructor shared pointer for local shared pointers
@@ -130,36 +133,33 @@ T shared_queue<T>::dequeue()
   // pointer is the same as one in the atomic tail register,
   // then the value pointed to by the local pointer is the same as
   // it was when the local pointer was last written to.
-  auto oldhead = std::atomic_load_explicit(&head, std::memory_order_acquire);
+  auto oldhead = std::atomic_load_explicit(&head_, std::memory_order_acquire);
 
   // Cycle until we can "claim" a node for the dequeuer, with the oldhead
   // variable pointing to it.
   while (true) {
+    // TODO: potential optimization - use head->next == nullptr as a
+    // sufficient condition for 0-emptiness or 1-emptiness.
+
     // We can't go ahead of tail, even if we see head->next != nullptr, because
     // enqueuers rely on that node's validity.
-    auto oldtail = tail.load(std::memory_order_relaxed);
-    while (oldhead.get() == oldtail) {
-      if (oldhead->val.valid()) {
-        if (oldhead->val.invalidate())
-          goto claimed;
-      } else {
-        // TODO optimization: else condition wait on tail != head
-        std::this_thread::sleep_for(std::chrono::nanoseconds(5));
-      }
-      // Some enqueues may have occured, so we re-check the tail
-      // (and break out the loop if multiple enqueues occured).
-      oldtail = tail.load(std::memory_order_relaxed);
+    auto oldtail = tail_.load(std::memory_order_relaxed);
+    if(oldhead.get() == oldtail) {
+      if (oldhead->val.valid() && oldhead->val.invalidate())
+        break;
+      // If head == tail and head is invalid, then we're empty.
+      return {};
     }
 
     auto newhead = oldhead->next.load(std::memory_order_acquire);
     std::shared_ptr<node> newhead_shared(newhead, del);
     if (std::atomic_compare_exchange_weak_explicit(
-            &head, &oldhead, newhead_shared, std::memory_order_release,
+            &head_, &oldhead, newhead_shared, std::memory_order_release,
             std::memory_order_relaxed)) {
       // We have claimed oldhead successfully, but it could be invalid
       // (if the queue was empty and one insert occured)
       if (oldhead->val.valid())
-        goto claimed;
+        break;
       // If we had a successful CAS but oldhead is invalid, then this
       // is the case where we were waiting on a head == tail case
       // but tail moved, so we moved head forward to a valid node
@@ -172,15 +172,30 @@ T shared_queue<T>::dequeue()
     }
   }
 
-claimed:
-  return std::move(*oldhead->val.get());
+  remove_version_.fetch_add(1, std::memory_order_relaxed);
+
+  return {std::move(*oldhead->val.get())};
+}
+
+// TODO optimization: do manual RVO on the optional by inlining?
+template<typename T>
+T shared_queue<T>::dequeue() {
+  util::optional<T> opt;
+  while (true) {
+    opt = try_dequeue();
+    if (opt.valid())
+      break;
+    std::unique_lock<std::mutex> lk(empty_mutex_);
+    empty_condition_.wait(lk, [this]{ return !empty(); });
+  }
+  return std::move(opt.access());
 }
 
 // As is the normal assumption, the queue should not be in use
 // by other threads.
 template<typename T>
 shared_queue<T>::~shared_queue() {
-  auto oldhead = std::atomic_load_explicit(&head, std::memory_order_acquire);
+  auto oldhead = std::atomic_load_explicit(&head_, std::memory_order_acquire);
   for (auto i = oldhead->next.load(std::memory_order_acquire);
        i != nullptr;) {
     auto prev = i;
@@ -192,8 +207,8 @@ shared_queue<T>::~shared_queue() {
 // Requires dequeuers are operating on the queue.
 template<typename T>
 std::ostream& operator<<(std::ostream& o, const shared_queue<T>& q) {
-  auto tail = std::atomic_load_explicit(&q.tail, std::memory_order_relaxed);
-  auto head = std::atomic_load_explicit(&q.head, std::memory_order_acquire);
+  auto tail = std::atomic_load_explicit(&q.tail_, std::memory_order_relaxed);
+  auto head = std::atomic_load_explicit(&q.head_, std::memory_order_acquire);
 
   o << "[";
   if (head.get() == tail) {
