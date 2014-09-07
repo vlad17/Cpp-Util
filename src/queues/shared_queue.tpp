@@ -108,14 +108,12 @@ void shared_queue<T>::enqueue(node* n) noexcept {
                                 std::memory_order_relaxed);
 
   insert_version_.fetch_add(1, std::memory_order_relaxed);
-  // TODO optimization: if empty() check before notify?
   empty_condition_.notify_one();
 }
 
 template<typename T>
 util::optional<T> shared_queue<T>::try_dequeue()
 {
-  static std::atomic<int> deleted(0);
   // Specialized destructor shared pointer for local shared pointers
   // which toggles on the actual destruction (no need for atomics
   // here becuase of other memory barriers.

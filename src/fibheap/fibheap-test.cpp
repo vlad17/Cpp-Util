@@ -8,6 +8,7 @@
 
 #include "fibheap/fibheap.h"
 
+#include <array>
 #include <iostream>
 #include <random>
 

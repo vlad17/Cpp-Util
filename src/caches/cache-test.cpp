@@ -88,7 +88,6 @@ void cache_test(T lhc)
         cout << lhc2 ; cout << endl;
         cout << "after move (from assignment value) - size: " << lhc.size() ; cout << endl;
         lhc2.clear();
-}
 
 #ifdef NDEBUG
         cout << "stress tests for heap cache...." << endl;
@@ -105,3 +104,5 @@ void cache_test(T lhc)
         }
         cout << "...Completed" << endl;
 #endif /* NDEBUG */
+
+}
