@@ -10,7 +10,6 @@
 #include <atomic>
 #include <mutex>
 #include <type_traits>
-// TODO use boost spinlock instead (or your own)
 
 namespace _sync_atomic_shared_internal {
 
@@ -20,7 +19,7 @@ std::unique_ptr<T> make_unique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 
-typedef std::mutex lock_type; // TODO use spin
+typedef std::mutex lock_type;
 typedef std::lock_guard<lock_type> lock_guard;
 
 template<class T>

@@ -68,6 +68,7 @@ vector<int> read_strvec(string);
 void test_main(int argc, char** argv) {
   // Bench if argument passed
   bool bench = argc > 1 && strcmp(argv[1], "bench") == 0;
+  bool boost = argc > 2 && strcmp(argv[2], "boost") == 0;
   if (!bench) {
     cout << "MPMC Queue Unit Test..." << endl;
     cout << "\nShared Queue" << endl;
@@ -77,8 +78,10 @@ void test_main(int argc, char** argv) {
     test_multithreaded<shared_queue>();
   } else {
     cout << "MPMC Queue Benchmark" << endl;
-    cout << "\nBoost Queue" << endl;
-    bench_queue<boost_queue>();
+    if (boost) {
+      cout << "\nBoost Queue" << endl;
+      bench_queue<boost_queue>();
+    }
     cout << "\nShared Queue" << endl;
     bench_queue<shared_queue>();
   }
