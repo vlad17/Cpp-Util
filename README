@@ -9,10 +9,9 @@ Requires boost installed and available in system headers.
 To run tests:
 cmake . # specify -DCMAKE_CXX_COMPILER=... if it's not g++
 make -j8 # 8 or whatever number of supported threads
-make test
+ctest
 
 TODO:
-        condition var in shared_queue - notify all vs notify one, other shared_queue optimizations
         rename every *.h to *.hpp
         namespace for individual libraries
         switch to boost style
@@ -20,10 +19,8 @@ TODO:
         implement Countdown latch 
         finish TODOs in MPMC test after
         hazard_ptr structure (http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890)
-        hazard_queue (same as shared_queue, but instead of shared_ptr use hazard_ptr)
-        boost::spinlock
-        Add spinlock to atomic_shared.h implementation (perf check if better)
-        perf check shared_queue vs lfqueue (vs boost queue ?)
+        hazard_queue (same as shared_queue, but instead of shared_ptr use hazard_ptr, also empty can use head == tail + invalid)
+        check hazard_queue vs shared_queue
         document throws for pthreads (look at the "too many readers" return val, maybe spin?)
         implement SingularThreadpool (1t)
         DynamicThreadpool (min, max, timeout)
@@ -39,4 +36,4 @@ TODO:
 	-> concurrent versions of exact_heap_cache and linked_cache (clean up the entire mess)
 	fibheap (check file for TODOs)
 	valgrind check everything
-	
+	Use a lazily updated bool instead of insert_version_ and remove_version to denote "empty" in shared_queue.h

@@ -52,6 +52,8 @@
 //
 // Shared queue invariants:
 //   The queue is empty iff head == tail and !head->val.valid()
+//     (though we can't use this to check for empty() since this would
+//      require to atomic word-sized loads)
 //   head and tail always move forward
 //   tail is never ahead of head
 //   In order for a thread to have exited the enqueue operation,
@@ -136,9 +138,6 @@ util::optional<T> shared_queue<T>::try_dequeue()
   // Cycle until we can "claim" a node for the dequeuer, with the oldhead
   // variable pointing to it.
   while (true) {
-    // TODO: potential optimization - use head->next == nullptr as a
-    // sufficient condition for 0-emptiness or 1-emptiness.
-
     // We can't go ahead of tail, even if we see head->next != nullptr, because
     // enqueuers rely on that node's validity.
     auto oldtail = tail_.load(std::memory_order_relaxed);

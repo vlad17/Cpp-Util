@@ -57,10 +57,11 @@ class shared_queue : public queue<T> {
   std::atomic<node*> tail_;
 
   // Mutex and condition variable for blocked dequeuers waiting on
-  // the "empty" condition. Note
+  // the "empty" condition.
   std::condition_variable empty_condition_;
   std::mutex empty_mutex_;
-  // TODO optimization: only need a bool for empty, right?
+
+  // Below versioning needed for empty()
   std::atomic<size_t> insert_version_; // number enqueued
   std::atomic<size_t> remove_version_; // number dequeued
 
