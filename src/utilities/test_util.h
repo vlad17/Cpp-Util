@@ -30,7 +30,7 @@
 // the following, and then a newline:
 //
 // Expr `x == 5` failed: x is 4
-void test_main();
+void test_main(int argc, char** argv);
 
 #include "utilities/test_util.include"
 

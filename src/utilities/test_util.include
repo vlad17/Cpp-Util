@@ -7,7 +7,7 @@
   testing header. Keeps details away from test-util.h file.
 
   This implementation is inspired by gtest, but that's where the
-  connnection ends    
+  connnection ends
 */
 
 #include <iostream>
@@ -39,9 +39,9 @@ class test_error : public std::runtime_error {
          __TEST_UTIL_INCLUDE_2ARGS, __TEST_UTIL_INCLUDE_1ARG, )
 #define ASSERT(...) __TEST_UTIL_INCLUDE_MACRO_CHOOSER(__VA_ARGS__)(__VA_ARGS__)
 
-int main() {
+int main(int argc, char** argv) {
   try {
-    test_main();
+    test_main(argc, argv);
   } catch(const test_error& err) {
     std::cerr << "Unit test failure:" << std::endl;
     std::cerr << err.what() << std::endl;

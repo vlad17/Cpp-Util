@@ -1,7 +1,7 @@
 /*
  * Vladimir Feinberg
  * mpmc-test.cpp
- * 2014-08-31
+ * 2014-09-06
  *
  * Defines tests for mpmc synchronoized queues.
  */
@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstring>
 #include <future>
 #include <iostream>
 #include <iomanip>
@@ -18,7 +19,9 @@
 #include <thread>
 #include <vector>
 
+#include "utilities/nullstream.h"
 #include "utilities/test_util.h"
+#include "utilities/timer.h"
 #include "queues/queue.h"
 #include "queues/shared_queue.h"
 
@@ -30,29 +33,39 @@ minstd_rand0 gen(SEED);
 template<template<typename> class T>
 void unit_test();
 
-template<template<typename> class T>
+template<template<typename> class T, bool BENCH>
 void test_multithreaded();
 
 vector<int> read_strvec(string);
 
-void test_main() {
+void test_main(int argc, char** argv) {
+  // Bench if argument passed
+  bool bench = argc > 1 && strcmp(argv[1], "bench") == 0;
   cout << "Queue Test..." << endl;
   cout << "\nShared Queue" << endl;
-  cout << "\tUnit testing:" << endl;
-  unit_test<shared_queue>();
-  cout << "\n\tMultithreaded test:" << endl;
-  test_multithreaded<shared_queue>();
+  if (!bench) {
+    cout << "\tUnit testing:" << endl;
+    unit_test<shared_queue>();
+    cout << "\tMultithreaded test:" << endl;
+    test_multithreaded<shared_queue, false>();
+  } else {
+    cout << "\tBenching (multithreaded test x100): ";
+    cout.flush();
+    TIME_BLOCK(std::chrono::milliseconds, "") {
+      test_multithreaded<shared_queue, true>();
+    }
+  }
 }
 
 // TODO wrap s if longer that 40 chars (and adjust below test names)
-void start(const string& s) {
-  cout << '\t' << left << setw(40);
-  cout << s;
-  cout.flush();
+void start(const string& s, std::ostream& outs = cout) {
+  outs << '\t' << left << setw(40);
+  outs << s;
+  outs.flush();
 }
 
-void complete(const string& s = "...complete") {
-  cout << right << s << endl;
+void complete(const string& s = "...complete", std::ostream& outs = cout) {
+  outs << right << s << endl;
 }
 
 // X should print [...]
@@ -162,11 +175,15 @@ tuple<int, int> interval(int idx, int per) {
   return make_tuple(start, end);
 }
 
-template<template<typename> class T>
+template<template<typename> class T, bool BENCH>
 void test_multithreaded() {
+  // Use larger values and don't print to cout if BENCH
+  static const int kBenchMultiplier = BENCH ? 100 : 1;
+  auto& outs = BENCH ? nullstream : cout;
+
   static const int kNumEnqueuers = 10;
-  static const int kItemsPerEnqueuer = 2000;
-  cout << "\tTesting concurrent enqueues and validity, "
+  static const int kItemsPerEnqueuer = 2000 * kBenchMultiplier;
+  outs << "\tTesting concurrent enqueues and validity, "
        << kNumEnqueuers << " enqueuers x " << kItemsPerEnqueuer << " items"
        << endl;
 
@@ -176,7 +193,7 @@ void test_multithreaded() {
   // is going on.
 
   // Gives unique interval for concurrent inserters.
-  start("concurrent inserts");
+  start("concurrent inserts", outs);
 
   atomic<int> cdl(kNumEnqueuers); // todo replace with a countdown latch
   T<int> testq;
@@ -230,16 +247,16 @@ void test_multithreaded() {
            << start << ", " << end << ")");
   }
 
-  complete();
+  complete("...complete", outs);
 
   // Keep the same constants so we have exactly as many items removed
   // as were put in (don't make dequeuers dequeue empty)
   static const int kNumDequeuers = kNumEnqueuers;
   static const int kItemsPerDequeuer = kItemsPerEnqueuer;
-  cout << "\tTesting concurrent dequeues and validity, "
+  outs << "\tTesting concurrent dequeues and validity, "
        << kNumDequeuers << " dequeuers x " << kItemsPerDequeuer << " items"
        << endl;
-  start("concurrent pops");
+  start("concurrent pops", outs);
 
   // Dequeuers just check that they read everything in ascending order
   // (not totally, but within the resolution of each enqueuer).
@@ -273,25 +290,25 @@ void test_multithreaded() {
   for (auto& fut : dfuts)
     fut.get();
 
-  complete();
+  complete("...complete", outs);
 
   // Dequeued all, should be mpty
-  start("Testing empty");
+  start("Testing empty", outs);
   ASSERT(testq.empty());
-  complete();
+  complete("...complete", outs);
 
   static const int kRandomizedNumEnqueuers = 3;
   static const int kRandomizedNumDequeuers = 4;
-  static const int kInterval = 10;
-  static const int kDesiredRandomizedNum = 1000;
+  static const int kInterval = 10 * kBenchMultiplier;
+  static const int kDesiredRandomizedNum = 1000 * kBenchMultiplier;
   static const int kRandomizedNum =
     (kDesiredRandomizedNum / kRandomizedNumEnqueuers) * kRandomizedNumEnqueuers;
-  cout << "\tEnqueue/Dequeue testing (pause after enqueuing " << kInterval
+  outs << "\tEnqueue/Dequeue testing (pause after enqueuing " << kInterval
        << " to encourage dequeuers),\n"
        << "\t\tenqueue: " << kRandomizedNumEnqueuers << "\n"
        << "\t\tdequeue: " << kRandomizedNumDequeuers << " (test empty edge case)\n"
        << "\t\tNumber of items: " << kRandomizedNum << endl;
-  start("Enqueue/dequeue");
+  start("Enqueue/dequeue", outs);
 
   cdl.store(kRandomizedNumEnqueuers + kRandomizedNumDequeuers);
 
@@ -349,12 +366,12 @@ void test_multithreaded() {
   for (auto& fut : rdfuts)
     fut.get();
 
-  complete();
+  complete("...complete", outs);
 
-  start("Test empty");
+  start("Test empty", outs);
   ASSERT(testq.empty());
-  complete();
+  complete("...complete", outs);
 
-  start("");
-  complete("...........Success!");
+  start("", outs);
+  complete("...........Success!", outs);
 }
