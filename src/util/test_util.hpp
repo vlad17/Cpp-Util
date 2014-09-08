@@ -32,6 +32,6 @@
 // Expr `x == 5` failed: x is 4
 void test_main(int argc, char** argv);
 
-#include "utilities/test_util.include"
+#include "util/test_util.include"
 
 #endif /* TEST_UTIL_H_ */

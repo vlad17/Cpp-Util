@@ -1,7 +1,7 @@
 /*
   Vladimir Feinberg
-  util-test.cpp
-  2014-06-22
+  util/util-test.cpp
+  2014-09-08
 
   Defines test for utilities
 */

@@ -36,7 +36,7 @@ function(ADD_LIB)
 endfunction()
 
 # All subdirectories
-set(ALL_DIRS sync fibheap caches queues utilities)
+set(ALL_DIRS synchro fibheap caches queues util)
 
 # Adds a test with dependencies on all directories
 function(ADD_EXEC_ALL_DEPENDENCIES name)

@@ -1,7 +1,7 @@
 /*
    Vladimir Feinberg
-   shared_queue.tpp
-   2014-08-31
+   queues/shared_queue.tpp
+   2014-09-08
 
    shared_queue implementation.
  */
@@ -68,6 +68,8 @@
 //     method calls which has correct FIFO queue behavior for the
 //     concurrent queue to be correct)
 //   A value can only be invalid in the head.
+
+namespace queues {
 
 template<typename T>
 bool shared_queue<T>::is_lock_free() const {
@@ -220,3 +222,5 @@ std::ostream& operator<<(std::ostream& o, const shared_queue<T>& q) {
       o << *i->val.get() << ", ";
   return o << *tail->val.get() << "]";
 }
+
+} // namespace queues

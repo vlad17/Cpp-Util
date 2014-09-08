@@ -1,17 +1,18 @@
 /*
  * Vladimir Feinberg
- * rwlock.cpp
- * 2014-05-27
+ * synchro/rwlock.cpp
+ * 2014-09-08
  *
  * r/w lock implementation
  */
 
+#include "synchro/rwlock.hpp"
+
 #include <system_error>
 #include <pthread.h>
 
-#include "sync/rwlock.hpp"
-
 using namespace std;
+using namespace synchro;
 using namespace locks;
 
 // RW class --------------------------------------------------------------

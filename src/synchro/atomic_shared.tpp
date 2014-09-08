@@ -1,7 +1,7 @@
 /*
   Vladimir Feinberg
-  2014-08-24
-  atomic_shared.tpp
+  2014-09-08
+  synchro/atomic_shared.tpp
 
   Implementation of atomic_shared.h's promises for atomic ops on a
   std::shared_ptr.
@@ -11,7 +11,8 @@
 #include <mutex>
 #include <type_traits>
 
-namespace _sync_atomic_shared_internal {
+namespace synchro {
+namespace _synchro_atomic_shared_internal {
 
 // Overload in this namespace while waiting for C++14...
 template<class T, class... Args>
@@ -74,28 +75,29 @@ using selector = typename std::conditional<ATOMIC_SUPPORTED, std::shared_ptr<T>,
 template<class T>
 using selected = selector<T, has_atomic_overloads<std::shared_ptr<T> >::value>;
 
-} // namespace _sync_atomic_shared_internal
+} // namespace _synchro_atomic_shared_internal
+} // namespace synchro
 
 namespace std {
   template<class T>
   bool atomic_is_lock_free(
-      const _sync_atomic_shared_internal::locked_shared_ptr<T>* p) {
+      const synchro::_synchro_atomic_shared_internal::locked_shared_ptr<T>* p) {
     return false;
   }
 
   template<class T>
   shared_ptr<T> atomic_load_explicit(
-      const _sync_atomic_shared_internal::locked_shared_ptr<T>* p,
+      const synchro::_synchro_atomic_shared_internal::locked_shared_ptr<T>* p,
       memory_order) {
-    _sync_atomic_shared_internal::lock_guard lk(p->lock());
+    synchro::_synchro_atomic_shared_internal::lock_guard lk(p->lock());
     return *p;
   }
 
   template<class T>
   void atomic_store_explicit(
-      _sync_atomic_shared_internal::locked_shared_ptr<T>* p,
+      synchro::_synchro_atomic_shared_internal::locked_shared_ptr<T>* p,
       shared_ptr<T> r, memory_order) {
-    _sync_atomic_shared_internal::lock_guard lk(p->lock());
+    synchro::_synchro_atomic_shared_internal::lock_guard lk(p->lock());
     // (**) Careful - *p = move(r) translates as
     // *p = locked_shared_ptr(move(r)), which gives
     // p a new mutex!
@@ -104,7 +106,7 @@ namespace std {
 
   template<class T>
   shared_ptr<T> atomic_exchange_explicit(
-      _sync_atomic_shared_internal::locked_shared_ptr<T>* p,
+      synchro::_synchro_atomic_shared_internal::locked_shared_ptr<T>* p,
       shared_ptr<T> r, memory_order) {
     p->lock().lock();
     p->swap(r); // see (**) above
@@ -114,10 +116,10 @@ namespace std {
 
   template<class T>
   bool atomic_compare_exchange_strong_explicit(
-      _sync_atomic_shared_internal::locked_shared_ptr<T>* p,
+      synchro::_synchro_atomic_shared_internal::locked_shared_ptr<T>* p,
       shared_ptr<T>* expected, shared_ptr<T> desired,
       memory_order, memory_order) {
-    _sync_atomic_shared_internal::lock_guard lk(p->lock());
+    synchro::_synchro_atomic_shared_internal::lock_guard lk(p->lock());
     if (*p == *expected) {
       p->swap(desired); // see (**) above
       return true;
@@ -128,7 +130,7 @@ namespace std {
 
   template<class T>
   bool atomic_compare_exchange_weak_explicit(
-      _sync_atomic_shared_internal::locked_shared_ptr<T>* p,
+      synchro::_synchro_atomic_shared_internal::locked_shared_ptr<T>* p,
       shared_ptr<T>* expected, shared_ptr<T> desired,
       memory_order success, memory_order failure) {
     return atomic_compare_exchange_strong_explicit(

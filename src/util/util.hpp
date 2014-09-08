@@ -1,14 +1,15 @@
 /*
  * Vladimir Feinberg
- * util.h
- * 2014-09-01
+ * util/util.h
+ * 2014-09-08
  *
  * Header for basic utility classes. Partially influenced by:
- * http://programmers.stackexchange.com/questions/237339/is-iterable-like-behavior-in-c-attainable/237352#237352
+ * http://programmers.stackexchange.com/questions/
+ *   237339/is-iterable-like-behavior-in-c-attainable/237352#237352
  */
 
-#ifndef UTIL_H_
-#define UTIL_H_
+#ifndef UTIL_UTIL_H_
+#define UTIL_UTIL_H_
 
 #include <cassert>
 
@@ -17,8 +18,7 @@
 
 // TODO cleanup the below
 
-namespace util
-{
+namespace util {
 
 template<typename Iterator>
 class iterable;
@@ -41,15 +41,13 @@ class iterable {
 };
 
 template<typename T>
-auto as_iterator(T& t) -> iterable<decltype(t.begin())>
-{
+auto as_iterator(T& t) -> iterable<decltype(t.begin())> {
   return iterable<decltype(t.begin())>(t.begin(), t.end());
 }
 
 // Pointer comparison
 template<typename T>
-struct ptrcmp
-{
+struct ptrcmp {
   bool operator()(const T* t1, const T* t2) {return *t1 < *t2;}
 };
 
@@ -58,8 +56,7 @@ struct ptrcmp
  * type itself otherwise. Allows for faster value semantics when it's worth it.
  */
 template<typename T>
-class scref
-{
+class scref {
  private:
   template<bool B, class E>
   struct aux { typedef const E& type; };
@@ -71,4 +68,4 @@ class scref
 
 }
 
-#endif /* UTIL_H_ */
+#endif /* UTIL_UTIL_H_ */

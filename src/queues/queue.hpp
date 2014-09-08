@@ -1,15 +1,17 @@
 /*
-   Vladimir Feinberg
-   queue.h
-   2014-08-17
+  Vladimir Feinberg
+  queues/queue.hpp
+  2014-09-08
 
-   Contains FIFO queue interface.
- */
+  Contains FIFO queue interface.
+*/
 
-#ifndef QUEUES_QUEUE_H_
-#define QUEUES_QUEUE_H_
+#ifndef QUEUES_QUEUE_HPP_
+#define QUEUES_QUEUE_HPP_
 
-#include "utilities/optional.h"
+#include "util/optional.hpp"
+
+namespace queues {
 
 template<typename T>
 class queue {
@@ -29,4 +31,6 @@ class queue {
   virtual util::optional<T> try_dequeue() = 0;
 };
 
-#endif /* QUEUES_QUEUE_H_ */
+} // namespace queues
+
+#endif /* QUEUES_QUEUE_HPP_ */

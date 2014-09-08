@@ -1,12 +1,12 @@
 /*
  * Vladimir Feinberg
- * ptw-test.cpp
- * 2014-06-22
+ * synchro/ptw-test.cpp
+ * 2014-09-08
  *
  * Defines tests for pthread wrappers
  */
 
-#include "sync/rwlock.hpp"
+#include "synchro/rwlock.hpp"
 
 #include <iostream>
 #include <random>
@@ -17,34 +17,31 @@
 #include <functional>
 
 using namespace std;
+using namespace synchro;
 
 const int SEED = 0;
 minstd_rand0 gen(SEED);
 
 void rwtest();
 
-int main()
-{
+int main() {
   cout << "locks test...." << endl;
   rwtest();
   return 0;
 }
 
-void rwtest()
-{
+void rwtest() {
   cout << "\nrw lock test" << endl;
   const int SLEEP = 30;
   const int NUM = 3;
   int shared = 0;
   locks::rw rwlk;
 
-  auto readerf = [&rwlk, &shared, SLEEP, NUM]()
-    {
+  auto readerf = [&rwlk, &shared, SLEEP, NUM]() {
       this_thread::sleep_for(chrono::milliseconds(SLEEP));
       stringstream ss;
       ss << "\tThread " << this_thread::get_id() << " read: ";
-      for(int i = 0; i < NUM; ++i)
-        {
+      for(int i = 0; i < NUM; ++i) {
           rwlk.lock_shared();
           int reading = shared;
           string s = ss.str() + to_string(reading) + '\n';
@@ -53,8 +50,7 @@ void rwtest()
           this_thread::sleep_for(chrono::milliseconds(SLEEP));
         }
     };
-  auto writerf = [&rwlk, &shared, SLEEP](int x)
-    {
+  auto writerf = [&rwlk, &shared, SLEEP](int x) {
       this_thread::sleep_for(chrono::milliseconds(SLEEP/2));
       stringstream ss;
       ss << "\tThread " << this_thread::get_id() << " wrote: ";

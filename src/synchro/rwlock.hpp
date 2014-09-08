@@ -1,24 +1,22 @@
 /*
  * Vladimir Feinberg
- * rwlock.hpp
- * 2014-05-27
+ * synchro/rwlock.hpp
+ * 2014-09-08
  *
- * Generates a wrapper around the pthreads rw lock
+ * Generates a wrapper around the pthreads rw lock.
  */
 
-#ifndef RWLOCK_HPP_
-#define RWLOCK_HPP_
+#ifndef SYNCHRO_RWLOCK_HPP_
+#define SYNCHRO_RWLOCK_HPP_
 
 #include <pthread.h>
 #include <mutex>
 
-namespace locks
-{
-  class rw
-  {
+namespace synchro {
+namespace locks {
+  class rw {
   private:
-    class sharable
-    {
+    class sharable {
     private:
       locks::rw& lkref_;
     public:
@@ -46,8 +44,10 @@ namespace locks
     bool try_lock() noexcept;
     void unlock();
     // read-only reference (lock() is a lock_shared). Only valid as long as this is.
-    ronly read_only() {return ronly(*this);}
+    ronly read_only() { return ronly(*this); }
   };
 }
 
-#endif /* RWLOCK_HPP_ */
+} // namespace synchro
+
+#endif /* SYNCHRO_RWLOCK_HPP_ */

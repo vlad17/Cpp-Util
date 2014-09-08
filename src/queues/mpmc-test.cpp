@@ -1,7 +1,7 @@
 /*
  * Vladimir Feinberg
- * mpmc-test.cpp
- * 2014-09-06
+ * queues/mpmc-test.cpp
+ * 2014-09-08
  *
  * Defines tests for mpmc synchronoized queues.
  */
@@ -21,12 +21,13 @@
 
 #include <boost/lockfree/queue.hpp>
 
-#include "utilities/test_util.h"
-#include "utilities/timer.h"
-#include "queues/queue.h"
-#include "queues/shared_queue.h"
+#include "util/test_util.hpp"
+#include "util/timer.hpp"
+#include "queues/queue.hpp"
+#include "queues/shared_queue.hpp"
 
 using namespace std;
+using namespace queues;
 
 const int SEED = 0;
 minstd_rand0 gen(SEED);

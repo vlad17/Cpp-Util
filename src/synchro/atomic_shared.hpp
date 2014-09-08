@@ -1,7 +1,7 @@
 /*
   Vladimir Feinberg
-  2014-08-24
-  atomic_shared.h
+  2014-09-08
+  synchro/atomic_shared.hpp
 
   Atomic operations on shared pointers themselves are unfortuantely not
   supported by libstdc++, even though they are by libc++. This header
@@ -14,42 +14,48 @@
   and the atomic overloads that are declared in this header.
 */
 
-#ifndef SYNC_ATOMIC_SHARED_H
-#define SYNC_ATOMIC_SHARED_H
+#ifndef SYNCHRO_ATOMIC_SHARED_HPP_
+#define SYNCHRO_ATOMIC_SHARED_HPP_
 
 #include <memory>
 
-#include "sync/atomic_shared.tpp"
+#include "synchro/atomic_shared.tpp"
+
+namespace synchro {
 
 // Use this class just like a shared_ptr<T>. Obviously, shared_ptr<T> doesn't
 // have a virtual destructor, so don't rely on a polymorphic delete!
 // Don't rely on the fact that an atomic_shared_ptr extends shared_ptr at all.
 // TODO implement this with composition eventually...
 template<class T>
-using atomic_shared_ptr = _sync_atomic_shared_internal::selected<T>;
+using atomic_shared_ptr = _synchro_atomic_shared_internal::selected<T>;
+
+} // namespace synchro
 
 // Note there are no operations which work with two different
 // atomic_shared_ptrs - this could easily cause deadlock if you're not
 // careful anyway.
 template<class T>
-bool std::atomic_is_lock_free(const atomic_shared_ptr<T>* p);
+bool std::atomic_is_lock_free(const synchro::atomic_shared_ptr<T>* p);
 template<class T>
 std::shared_ptr<T> std::atomic_load_explicit(
-    const atomic_shared_ptr<T>* p, std::memory_order mo);
+    const synchro::atomic_shared_ptr<T>* p, std::memory_order mo);
 template<class T>
 void std::atomic_store_explicit(
-    atomic_shared_ptr<T>* p, std::shared_ptr<T> r, std::memory_order mo);
+    synchro::atomic_shared_ptr<T>* p, std::shared_ptr<T> r,
+    std::memory_order mo);
 template<class T>
 std::shared_ptr<T> std::atomic_exchange_explicit(
-    atomic_shared_ptr<T>* p, std::shared_ptr<T> r, std::memory_order mo);
+    synchro::atomic_shared_ptr<T>* p, std::shared_ptr<T> r,
+    std::memory_order mo);
 template<class T>
 bool std::atomic_compare_exchange_strong_explicit(
-    atomic_shared_ptr<T>* p, std::shared_ptr<T>* expected,
+    synchro::atomic_shared_ptr<T>* p, std::shared_ptr<T>* expected,
     std::shared_ptr<T> desired, std::memory_order success,
     std::memory_order failure);
 template<class T>
 bool std::atomic_compare_exchange_weak_explicit(
-    atomic_shared_ptr<T>* p, std::shared_ptr<T>* expected,
+    synchro::atomic_shared_ptr<T>* p, std::shared_ptr<T>* expected,
     std::shared_ptr<T> desired, std::memory_order success,
     std::memory_order failure);
 
@@ -79,5 +85,4 @@ bool atomic_compare_exchange_strong( std::shared_ptr<T>* p,
                                      std::shared_ptr<T> desired);
 */
 
-
-#endif /* SYNC_ATOMIC_SHARED_H */
+#endif /* SYNCHRO_ATOMIC_SHARED_HPP_*/

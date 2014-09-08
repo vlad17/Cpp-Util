@@ -1,10 +1,13 @@
 /*
   Vladimir Feinberg
-  timer.h
-  2014-09-06
+  util/timer.h
+  2014-09-08
 
-  Timing macro
+  Timing macro.
 */
+
+#ifndef UTIL_TIMER_HPP_
+#define UTIL_TIMER_HPP_
 
 #include <chrono>
 #include <iostream>
@@ -28,9 +31,10 @@
 #define TIME_BLOCK(unit, msg)                                               \
   for (auto start = std::chrono::high_resolution_clock::now(), end = start; \
        start == end ||                                                      \
-           _timer_internal::print_ret_false<unit>(start, end, msg);         \
+           util::_timer_internal::print_ret_false<unit>(start, end, msg);   \
        end = std::chrono::high_resolution_clock::now())
 
+namespace util {
 namespace _timer_internal {
 
 template<class chrono_unit>
@@ -58,3 +62,6 @@ bool print_ret_false(const time_point& start, const time_point& end,
 }
 
 } // namespace _timer_internal
+} // namespace util
+
+#endif /* UTIL_TIMER_HPP_ */

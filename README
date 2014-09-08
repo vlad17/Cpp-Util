@@ -2,6 +2,9 @@ Cpp-Util
 
 This is a collection of some data structures I have been working on recently.
 
+My MPMC queue seems to beat boost's! check out results at the end of this
+document, and the test if you don't believe me.
+
 Requires cmake 2.6+ and a c++11 supporting compiler.
 
 Requires boost installed and available in system headers.
@@ -12,19 +15,16 @@ make -j8 # 8 or whatever number of supported threads
 ctest
 
 TODO:
-        rename every *.h to *.hpp
-        namespace for individual libraries
-        switch to boost style
+        convert completely to boost style (double-check all directories)
         cmake boost dependency.
+        fix up tests everywhere
         implement Countdown latch 
-        finish TODOs in MPMC test after
         hazard_ptr structure (http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890)
         hazard_queue (same as shared_queue, but instead of shared_ptr use hazard_ptr, also empty can use head == tail + invalid)
         check hazard_queue vs shared_queue
         document throws for pthreads (look at the "too many readers" return val, maybe spin?)
-        implement SingularThreadpool (1t)
-        DynamicThreadpool (min, max, timeout)
-        WorkStealingThreadpool # not fair, uses distributor
+        implement SingularThreadpool (1t) (mpsc)
+        WorkStealingThreadpool # (using mpmc for each thread)
         clean up TODOs in code
         Create exception-based test file - use multithreaded exceptions.
         create test-testandset spinlock, and then queuelock (with everyhting, Art of mpp ch.7) 
@@ -37,3 +37,19 @@ TODO:
 	fibheap (check file for TODOs)
 	valgrind check everything
 	Use a lazily updated bool instead of insert_version_ and remove_version to denote "empty" in shared_queue.h
+
+MPMC Queue Benchmark
+
+Boost Queue
+	Enqueues (8x100000): 136ms
+	Dequeues (8x100000): 82ms
+	Fair mpmc (~1000000 items, 4 enq, 4 deq): 1063ms
+	Enqueue-weighted mpmc (~1000000 items, 6 enq, 2 deq): 601ms
+	Dequeue-weighted mpmc (~1000000 items, 2 enq, 6 deq): 1778ms
+
+Shared Queue
+	Enqueues (8x100000): 117ms
+	Dequeues (8x100000): 969ms
+	Fair mpmc (~1000000 items, 4 enq, 4 deq): 183ms
+	Enqueue-weighted mpmc (~1000000 items, 6 enq, 2 deq): 192ms
+	Dequeue-weighted mpmc (~1000000 items, 2 enq, 6 deq): 142ms

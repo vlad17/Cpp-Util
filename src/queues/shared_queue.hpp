@@ -1,7 +1,7 @@
 /*
  * Vladimir Feinberg
- * shared_queue.h
- * 2014-08-31
+ * queues/shared_queue.hpp
+ * 2014-09-08
  *
  * Lock free FIFO queue, satisfies the MPMC problem.
  * Implemented using a shared pointer at the tail side.
@@ -13,8 +13,8 @@
  * variable for empty queues and its mutex don't coun't).
  */
 
-#ifndef QUEUES_SHARED_QUEUE_H_
-#define QUEUES_SHARED_QUEUE_H_
+#ifndef QUEUES_SHARED_QUEUE_HPP_
+#define QUEUES_SHARED_QUEUE_HPP_
 
 #include <atomic>
 #include <condition_variable>
@@ -22,10 +22,12 @@
 #include <mutex>
 #include <ostream>
 
-#include "sync/atomic_shared.h"
-#include "queues/queue.h"
-#include "utilities/atomic_optional.h"
-#include "utilities/optional.h"
+#include "synchro/atomic_shared.hpp"
+#include "queues/queue.hpp"
+#include "util/atomic_optional.hpp"
+#include "util/optional.hpp"
+
+namespace queues {
 
 template<typename T>
 class shared_queue;
@@ -53,7 +55,7 @@ class shared_queue : public queue<T> {
   // each dequeuer take a local copy which ensures that the node
   // is not deleted by other dequeuers (so no new node will
   // have the same address as)
-  atomic_shared_ptr<node> head_;
+  synchro::atomic_shared_ptr<node> head_;
   std::atomic<node*> tail_;
 
   // Mutex and condition variable for blocked dequeuers waiting on
@@ -92,6 +94,8 @@ class shared_queue : public queue<T> {
   friend std::ostream& operator<< <>(std::ostream&, const shared_queue&);
 };
 
+} // namespace queues
+
 #include "queues/shared_queue.tpp"
 
-#endif /* QUEUES_SHARED_QUEUE_H_ */
+#endif /* QUEUES_SHARED_QUEUE_HPP_ */

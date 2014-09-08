@@ -20,8 +20,7 @@ namespace util {
  * Keeps track of whether or not the object is initialized.
  */
 template<typename T>
-class optional
-{
+class optional {
  private:
   alignas(T) char store[sizeof(T)]; // store object as a sequence of bytes explicitly
   bool initialized; // boolean tracks current state (necessary for moving)
@@ -53,6 +52,6 @@ class optional
 
 } // namespace util
 
-#include "utilities/optional.tpp"
+#include "util/optional.tpp"
 
 #endif /* UTILITIES_OPTIONAL_H */

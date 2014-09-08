@@ -1,11 +1,14 @@
 /*
   Vladimir Feinberg
-  2014-08-16
-  atomic_optional.h
+  util/atomic_optional.hpp
+  2014-09-08
 
   Implements the atomic_optional class, which is based off the optional
   class (see my own implementation and boost's as well).
 */
+
+#ifndef UTIL_ATOMIC_OPTIONAL_HPP_
+#define UTIL_ATOMIC_OPTIONAL_HPP_
 
 #include <atomic>
 
@@ -50,4 +53,6 @@ class atomic_optional {
 
 } // namespace util
 
-#include "utilities/atomic_optional.tpp"
+#include "util/atomic_optional.tpp"
+
+#endif /* UTIL_ATOMIC_OPTIONAL_HPP_ */
