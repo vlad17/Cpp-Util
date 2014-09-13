@@ -23,6 +23,7 @@ TODO:
         hazard_queue (same as shared_queue, but instead of shared_ptr use hazard_ptr, also empty can use head == tail + invalid)
         check hazard_queue vs shared_queue
         document throws for pthreads (look at the "too many readers" return val, maybe spin?)
+        suffix tries + ukkonen construct
         implement SingularThreadpool (1t) (mpsc)
         WorkStealingThreadpool # (using mpmc for each thread)
         clean up TODOs in code
