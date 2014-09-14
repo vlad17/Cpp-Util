@@ -1,6 +1,19 @@
 cmake_minimum_required(VERSION 2.6)
 project(Cpp_Util)
 
+# Boost
+
+find_package(Boost
+  1.53.0 # first release with lockfree headers
+  # [REQUIRED] COMPONENTS
+) # no components needed, just headers
+
+if(${Boost_FOUND})
+  include_directories(SYSTEM ${BOOST_INCLUDE_DIRS})
+  add_definitions(-DHAVE_BOOST)
+else()
+endif()
+
 # Compilation options
 
 if(NOT ${CMAKE_CXX_COMPILER})

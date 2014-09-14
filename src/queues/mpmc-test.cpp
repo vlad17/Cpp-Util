@@ -19,7 +19,9 @@
 #include <thread>
 #include <vector>
 
+#ifdef HAVE_BOOST
 #include <boost/lockfree/queue.hpp>
+#endif /* HAVE_BOOST */
 
 #include "util/test_util.hpp"
 #include "util/timer.hpp"
@@ -41,6 +43,7 @@ void test_multithreaded();
 template<template<typename> class T>
 void bench_queue();
 
+#ifdef HAVE_BOOST
 template<typename T>
 class boost_queue {
  public:
@@ -62,6 +65,7 @@ class boost_queue {
   condition_variable cond;
   mutex mtx;
 };
+#endif /* HAVE_BOOST */
 
 
 vector<int> read_strvec(string);
@@ -69,7 +73,9 @@ vector<int> read_strvec(string);
 void test_main(int argc, char** argv) {
   // Bench if argument passed
   bool bench = argc > 1 && strcmp(argv[1], "bench") == 0;
+#ifdef HAVE_BOOST
   bool boost = argc > 2 && strcmp(argv[2], "boost") == 0;
+#endif /* HAVE_BOOST */
   if (!bench) {
     cout << "MPMC Queue Unit Test..." << endl;
     cout << "\nShared Queue" << endl;
@@ -79,10 +85,12 @@ void test_main(int argc, char** argv) {
     test_multithreaded<shared_queue>();
   } else {
     cout << "MPMC Queue Benchmark" << endl;
+#ifdef HAVE_BOOST
     if (boost) {
       cout << "\nBoost Queue" << endl;
       bench_queue<boost_queue>();
     }
+#endif /* HAVE_BOOST */
     cout << "\nShared Queue" << endl;
     bench_queue<shared_queue>();
   }

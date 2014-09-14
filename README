@@ -15,14 +15,12 @@ make -j8 # 8 or whatever number of supported threads
 ctest
 
 TODO:
-        convert completely to boost style (double-check all directories)
-        cmake boost dependency.
-        fix up tests everywhere
         implement Countdown latch 
         hazard_ptr structure (http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890)
         hazard_queue (same as shared_queue, but instead of shared_ptr use hazard_ptr, also empty can use head == tail + invalid)
         check hazard_queue vs shared_queue
         document throws for pthreads (look at the "too many readers" return val, maybe spin?)
+        fix up tests everywhere
         suffix tries + ukkonen construct
         implement SingularThreadpool (1t) (mpsc)
         WorkStealingThreadpool # (using mpmc for each thread)
