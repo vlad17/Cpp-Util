@@ -1,3 +1,3 @@
 # CMakeLists file for queues directory
 
-ADD_EXEC(mpmc-test)
+ADD_EXEC(mpmc-test util)

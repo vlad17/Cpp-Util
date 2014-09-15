@@ -23,8 +23,8 @@
 #include <boost/lockfree/queue.hpp>
 #endif /* HAVE_BOOST */
 
-#include "util/test_util.hpp"
 #include "util/timer.hpp"
+#include "util/uassert.hpp"
 #include "queues/queue.hpp"
 #include "queues/shared_queue.hpp"
 
@@ -70,7 +70,7 @@ class boost_queue {
 
 vector<int> read_strvec(string);
 
-void test_main(int argc, char** argv) {
+int main(int argc, char** argv) {
   // Bench if argument passed
   bool bench = argc > 1 && strcmp(argv[1], "bench") == 0;
 #ifdef HAVE_BOOST
@@ -94,6 +94,7 @@ void test_main(int argc, char** argv) {
     cout << "\nShared Queue" << endl;
     bench_queue<shared_queue>();
   }
+  return 0;
 }
 
 // TODO wrap s if longer that 40 chars (and adjust below test names)
@@ -138,38 +139,42 @@ void unit_test() {
   start("Insert 0..9");
   for(int i = 0; i < 10; ++i)
     t.enqueue(i);
-  ASSERT(same(t, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}), "\n\t[t = " + as_string(t));
-  ASSERT(!t.empty());
+  UASSERT(same(t, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}))
+      << ("\n\t[t = " + as_string(t));
+  UASSERT(!t.empty());
   complete();
   start("Remove 0..9");
   for(int i = 0; i < 10; ++i)
-    ASSERT(t.dequeue() == i, "queue not FIFO");
-  ASSERT(same(t, {}), "\n\t[t = " + as_string(t));
-  ASSERT(t.empty());
+    UASSERT(t.dequeue() == i) << "queue not FIFO";
+  UASSERT(same(t, {})) << ("\n\t[t = " + as_string(t));
+  UASSERT(t.empty());
   complete();
   start("Insert 0..9");
   for(int i = 0; i < 10; ++i)
     t.enqueue(i);
-  ASSERT(same(t, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}), "\n\t[t = " + as_string(t));
-  ASSERT(!t.empty());
+  UASSERT(same(t, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}))
+      << ("\n\t[t = " + as_string(t));
+  UASSERT(!t.empty());
   complete();
   start("Remove 0..4");
   for(int i = 0; i < 5; ++i)
-    ASSERT(t.dequeue() == i, "queue not FIFO (partial remove)");
-  ASSERT(same(t, {5, 6, 7, 8, 9}), "\n\t(t = " + as_string(t) + ")");
-  ASSERT(!t.empty());
+    UASSERT(t.dequeue() == i) << "queue not FIFO (partial remove)";
+  UASSERT(same(t, {5, 6, 7, 8, 9}))
+      << ("\n\t(t = " + as_string(t) + ")");
+  UASSERT(!t.empty());
   complete();
   start("Insert 10..14");
   for(int i = 10; i < 15; ++i)
     t.enqueue(i);
-  ASSERT(same(t, {5, 6, 7, 8, 9, 10, 11, 12, 13, 14}),
-         "\n\t[t = " + as_string(t));
+  UASSERT(same(t, {5, 6, 7, 8, 9, 10, 11, 12, 13, 14}))
+      << ("\n\t[t = " + as_string(t));
   complete();
   start("Remove 5..14");
   for(int i = 5; i < 15; ++i)
-    ASSERT(t.dequeue() == i, "queue not FIFO (remove after being empty)");
-  ASSERT(same(t, {}), "\n\t[t = " + as_string(t));
-  ASSERT(t.empty());
+    UASSERT(t.dequeue() == i) << "queue not FIFO (remove after being empty)";
+  UASSERT(same(t, {}))
+      << ("\n\t[t = " + as_string(t));
+  UASSERT(t.empty());
   complete();
   start("Non-empty delete (valgrind)");
   {
@@ -232,7 +237,7 @@ void test_multithreaded() {
 
   atomic<int> cdl(kNumEnqueuers); // todo replace with a countdown latch
   T<int> testq;
-  ASSERT(testq.empty());
+  UASSERT(testq.empty());
   typedef tuple<vector<int>, vector<int>, vector<int> > threevec;
   vector<future<threevec> > futs;
   for (int i = 0; i < kNumEnqueuers; ++i)
@@ -263,23 +268,27 @@ void test_multithreaded() {
     tie(start, mid, end) = interval_mid(i, kItemsPerEnqueuer);
 
     for (int j : before)
-      ASSERT(!in_range(j, start, end));
+      UASSERT(!in_range(j, start, end));
 
     int current = start;
     for (int j : half)
-      if (in_range(j, start, end))
-        ASSERT(j == current++, "Expected fifo order ("
-               << j << " != " << (current - 1) << ")");
-    ASSERT(current == mid, "exactly half should be present ["
-           << start << ", " << mid << ")");
+      if (in_range(j, start, end)) {
+        UASSERT(j == current) << "Expected fifo order ("
+                              << j << " != " << current << ")";
+        current++;
+      }
+    UASSERT(current == mid) << "exactly half should be present ["
+           << start << ", " << mid << ")";
 
     current = start;
     for (int j : after)
-      if (in_range(j, start, end))
-        ASSERT(j == current++, "Expected fifo order ("
-               << j << " != " << (current - 1) << ")");
-    ASSERT(current == end, "all should be present ["
-           << start << ", " << end << ")");
+      if (in_range(j, start, end)) {
+        UASSERT(j == current) << "Expected fifo order ("
+                              << j << " != " << current << ")";
+        current++;
+      }
+    UASSERT(current == end) << "all should be present ["
+           << start << ", " << end << ")";
   }
 
   complete("...complete");
@@ -313,11 +322,11 @@ void test_multithreaded() {
 
           for (int val : seen) {
             int enqueuer = val / kItemsPerEnqueuer;
-            ASSERT(val >= 0 && enqueuer < kNumEnqueuers, "Value " << val
+            UASSERT(val >= 0 && enqueuer < kNumEnqueuers) << "Value " << val
                    << " could not have been enqueued (" << kNumEnqueuers
-                   << " enqueuers)");
-            ASSERT(latest[enqueuer] < val, "Expected fifo order, saw "
-                   << latest[enqueuer] << " before " << val);
+                   << " enqueuers)";
+            UASSERT(latest[enqueuer] < val) << "Expected fifo order, saw "
+                   << latest[enqueuer] << " before " << val;
             latest[enqueuer] = val;
           }
         }));
@@ -330,7 +339,7 @@ void test_multithreaded() {
   // Dequeued all, should be mpty
   start("Testing empty");
 
-  ASSERT(testq.empty());
+  UASSERT(testq.empty());
   complete("...complete");
 
   static const int kRandomizedNumEnqueuers = 3;
@@ -383,11 +392,12 @@ void test_multithreaded() {
 
           for (int val : seen) {
             int enqueuer = val / kRandomizedPerEnqueuer;
-            ASSERT(val >= 0 && enqueuer < kRandomizedNumEnqueuers, "Value " << val
-                   << " could not have been enqueued (" << kRandomizedNumEnqueuers
-                   << " enqueuers)");
-            ASSERT(latest[enqueuer] < val, "Expected fifo order, saw "
-                   << latest[enqueuer] << " before " << val);
+            UASSERT(val >= 0 && enqueuer < kRandomizedNumEnqueuers)
+                << "Value " << val
+                << " could not have been enqueued (" << kRandomizedNumEnqueuers
+                << " enqueuers)";
+            UASSERT(latest[enqueuer] < val) << "Expected fifo order, saw "
+                   << latest[enqueuer] << " before " << val;
             latest[enqueuer] = val;
           }
         }));
@@ -405,7 +415,7 @@ void test_multithreaded() {
   complete("...complete");
 
   start("Test empty");
-  ASSERT(testq.empty());
+  UASSERT(testq.empty());
   complete("...complete");
 
   start("");
@@ -436,7 +446,7 @@ void bench_queue() {
 
   atomic<int> cdl(kNumEnqueuers + 1); // todo replace with a countdown latch
   T<int> testq;
-  ASSERT(testq.empty());
+  UASSERT(testq.empty());
   vector<future<void> > futs;
 
   for (int i = 0; i < kNumEnqueuers; ++i)
@@ -480,7 +490,7 @@ void bench_queue() {
       fut.get();
   }
 
-  ASSERT(testq.empty());
+  UASSERT(testq.empty());
 
   static const int kItems = 1000000;
 

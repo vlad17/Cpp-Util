@@ -9,15 +9,16 @@
 #include "synchro/countdown_latch.hpp"
 
 #include <deque>
+#include <iostream>
 #include <future>
 #include <vector>
 
-#include "util/test_util.hpp"
+#include "util/uassert.hpp"
 
 using namespace std;
 using namespace synchro;
 
-void test_main(int, char**) {
+int main() {
   cout << "Randomized CDL testing" << endl;
 
   const int kTestSize = 100;
@@ -30,7 +31,7 @@ void test_main(int, char**) {
   for (int i = 0; i < kTestSize; ++i)
     futs.push_back(async(launch::async, [&](int idx) {
           for (bool b : started)
-            ASSERT(!b, "should not start before editing!");
+            UASSERT(!b) << "should not start before editing!";
           editing_latch.down();
           editing_latch.wait();
           started[idx] = true;
@@ -38,7 +39,7 @@ void test_main(int, char**) {
             cdls[i].down();
           for (int i = 0; i < kTestSize; ++i) { // TODO randomize this
             cdls[i].wait();
-            ASSERT(started[i]);
+            UASSERT(started[i]);
           }
         }, i));
 

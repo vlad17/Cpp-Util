@@ -14,11 +14,17 @@ cmake . # specify -DCMAKE_CXX_COMPILER=... if it's not g++
 make -j8 # 8 or whatever number of supported threads
 ctest
 
+Other cmake options are:
+-DCMAKE_BUILD_TYPE=(debug|release) - specifies build setting
+-DASSERTIONS_ON=(1|0) - specifies whether to turn on assertions, on by default for debug
+  and off by default for release (this flag overrides those defaults).
+        
+
 TODO:
-        implement Countdown latch 
+        use uassert instead of cassert's assert everywhere (and add cmake
+            implicit util dependency)
         generalized randomness seed setting
         random in cdl
-        generalized assert macro (separate from test_util, needs to multithread safe - probably need to make into non-macro that returns stream like gtest)
         start/complete test functions (print like ctest)
         hazard_ptr structure (http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890)
         hazard_queue (same as shared_queue, but instead of shared_ptr use hazard_ptr, also empty can use head == tail + invalid)
