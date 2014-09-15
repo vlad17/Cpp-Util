@@ -10,7 +10,7 @@
  *
  * For the most part the queue's lock free, but it relies
  * on an atomic shared_ptr, which may not be (the condition
- * variable for empty queues and its mutex don't coun't).
+ * variable for empty queues and its mutex don't count).
  */
 
 #ifndef QUEUES_SHARED_QUEUE_HPP_

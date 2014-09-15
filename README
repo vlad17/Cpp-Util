@@ -19,6 +19,8 @@ Other cmake options are:
 -DASSERTIONS_ON=(1|0) - specifies whether to turn on assertions, on by default for debug
   and off by default for release (this flag overrides those defaults).
         
+For quick building and testing, use "chmod 700 build-and-test.sh"
+Then ./build-and-test.sh
 
 TODO:
         use uassert instead of cassert's assert everywhere (and add cmake
