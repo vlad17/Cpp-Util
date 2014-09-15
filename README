@@ -16,10 +16,15 @@ ctest
 
 TODO:
         implement Countdown latch 
+        generalized randomness seed setting
+        random in cdl
+        generalized assert macro (separate from test_util, needs to multithread safe - probably need to make into non-macro that returns stream like gtest)
+        start/complete test functions (print like ctest)
         hazard_ptr structure (http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890)
         hazard_queue (same as shared_queue, but instead of shared_ptr use hazard_ptr, also empty can use head == tail + invalid)
         check hazard_queue vs shared_queue
         document throws for pthreads (look at the "too many readers" return val, maybe spin?)
+        minimal flag parser
         fix up tests everywhere
         suffix tries + ukkonen construct
         implement SingularThreadpool (1t) (mpsc)
