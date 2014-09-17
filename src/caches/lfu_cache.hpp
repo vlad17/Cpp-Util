@@ -12,11 +12,10 @@
 #ifndef CACHES_LFU_CACHE_HPP_
 #define CACHES_LFU_CACHE_HPP_
 
-#include <unordered_map>
-#include <vector>
-#include <cassert>
 #include <algorithm>
 #include <iostream>
+#include <unordered_map>
+#include <vector>
 
 #include "caches/cache.hpp"
 

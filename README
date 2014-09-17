@@ -23,8 +23,6 @@ For quick building and testing, use "chmod 700 build-and-test.sh"
 Then ./build-and-test.sh
 
 TODO:
-        use uassert instead of cassert's assert everywhere (and add cmake
-            implicit util dependency)
         generalized randomness seed setting
         random in cdl
         start/complete test functions (print like ctest)
@@ -48,6 +46,7 @@ TODO:
 	-> concurrent versions of exact_heap_cache and linked_cache (clean up the entire mess)
 	fibheap (check file for TODOs)
 	valgrind check everything
+        speed up assertions (worth it?)
 	Use a lazily updated bool instead of insert_version_ and remove_version to denote "empty" in shared_queue.h
 
 MPMC Queue Benchmark

@@ -6,6 +6,8 @@
  * Contains implementation of fibheap.h methods.
  */
 
+#include "util/uassert.hpp"
+
 template<typename T, typename C>
 template<typename InputIterator>
 fibheap<T,C>::fibheap(InputIterator first, InputIterator last,
@@ -131,10 +133,10 @@ auto fibheap<T,C>::emplace(Args&&... args) -> key_type {
 // keeps key the same
 template<typename T, typename C>
 void fibheap<T,C>::decrease_key(key_type key, const value_type& val) {
-  assert(key != nullptr);
+  UASSERT(key != nullptr);
   _consistency_check();
   node* changed = static_cast<node*>(const_cast<void*>(key));
-  assert(comp(val, changed->val));
+  UASSERT(comp(val, changed->val));
   changed->val = val;
   changed->marked = false;
   if(changed->up != nullptr)
@@ -162,7 +164,7 @@ void fibheap<T,C>::decrease_key(key_type key, const value_type& val) {
 
 template<typename T, typename C>
 void fibheap<T,C>::decrease_key(key_type key, value_type&& val) {
-  assert(key != nullptr);
+  UASSERT(key != nullptr);
   _consistency_check();
   node* changed = static_cast<node*>(const_cast<void*>(key));
   changed->val = std::forward<value_type>(val);
@@ -263,12 +265,12 @@ template<typename T, typename C>
 void fibheap<T,C>::_consistency_check() const {
   if(_size == 0)
   {
-    assert(min == nullptr);
+    UASSERT(min == nullptr);
     return;
   }
-  assert(min != nullptr);
-  assert(min->left != nullptr && min->right != nullptr);
-  assert(min->up == nullptr);
+  UASSERT(min != nullptr);
+  UASSERT(min->left != nullptr && min->right != nullptr);
+  UASSERT(min->up == nullptr);
 #if FIB_CHECK
   std::unordered_set<const node*> set;
   _tree_check(min, set);
@@ -287,11 +289,11 @@ size_t fibheap<T,C>::_tree_check(const node *root,
   const node *n = root;
   do
   {
-    assert(s.find(n) == s.end());
-    assert(n->left != nullptr);
-    assert(n->right != nullptr);
-    assert(n->right->left == n);
-    assert(n->right->up == n->up);
+    UASSERT(s.find(n) == s.end());
+    UASSERT(n->left != nullptr);
+    UASSERT(n->right != nullptr);
+    UASSERT(n->right->left == n);
+    UASSERT(n->right->up == n->up);
     s.insert(n);
     n = n->right;
   } while(n != root);
@@ -300,7 +302,7 @@ size_t fibheap<T,C>::_tree_check(const node *root,
   {
     ++ctr;
     size_t actual_num_children = _tree_check(n->down, s);
-    assert(actual_num_children == n->num_children);
+    UASSERT(actual_num_children == n->num_children);
     n = n->right;
   } while (n != root);
   return ctr;
@@ -309,7 +311,7 @@ size_t fibheap<T,C>::_tree_check(const node *root,
 
 template<typename T, typename C>
 void fibheap<T,C>::_rl_cut(node *n) {
-  assert(n != nullptr);
+  UASSERT(n != nullptr);
   n->right->left = n->left;
   n->left->right = n->right;
   n->left = n->right = n;
@@ -317,8 +319,8 @@ void fibheap<T,C>::_rl_cut(node *n) {
 
 template<typename T, typename C>
 void fibheap<T,C>::_rlt_cut(node *n) {
-  assert(n != nullptr);
-  assert(n->up != nullptr);
+  UASSERT(n != nullptr);
+  UASSERT(n->up != nullptr);
   node *next = n->right;
   _rl_cut(n);
   if(n->up->down == n)
@@ -329,11 +331,11 @@ void fibheap<T,C>::_rlt_cut(node *n) {
 
 template<typename T, typename C>
 void fibheap<T,C>::_rl_splice(node *main, node *insert) {
-  assert(main != nullptr);
-  assert(insert != nullptr);
+  UASSERT(main != nullptr);
+  UASSERT(insert != nullptr);
   node *r_main = main->right, *r_ins = insert->left;
-  assert(main != nullptr);
-  assert(insert != nullptr);
+  UASSERT(main != nullptr);
+  UASSERT(insert != nullptr);
   main->right = insert;
   insert->left = main;
   r_main->left = r_ins;
@@ -372,8 +374,8 @@ auto fibheap<T,C>::_join_nodes(std::vector<node*>& trees, node *n) -> std::pair<
 // child should be _rlt_cut
 template<typename T, typename C>
 void fibheap<T,C>::_rlt_splice(node *parent, node *child) {
-  assert(parent != nullptr);
-  assert(child != nullptr);
+  UASSERT(parent != nullptr);
+  UASSERT(child != nullptr);
   ++parent->num_children;
   if(parent->down == nullptr) parent->down = child;
   else _rl_splice(parent->down, child);
@@ -382,7 +384,7 @@ void fibheap<T,C>::_rlt_splice(node *parent, node *child) {
 
 template<typename T, typename C>
 void fibheap<T,C>::_delete_subtree(node *n) {
-  assert(n != nullptr);
+  UASSERT(n != nullptr);
   if(n->down == nullptr) return;
   node *del = n->down;
   do
@@ -396,8 +398,8 @@ void fibheap<T,C>::_delete_subtree(node *n) {
 
 template<typename T, typename C>
 void fibheap<T,C>::_copy_subtree(node *cpy, const node *n) {
-  assert(cpy != nullptr);
-  assert(n != nullptr);
+  UASSERT(cpy != nullptr);
+  UASSERT(n != nullptr);
   if(n->down == nullptr) return;
   cpy->down = new node(n->down->val);
   cpy->down->up = cpy;

@@ -6,6 +6,8 @@
  * Contains implementation of lfu_cache.hpp's heap_cache methods.
  */
 
+#include <util/uassert.hpp>
+
 namespace caches {
 namespace lfu {
 
@@ -22,7 +24,7 @@ auto heap_cache<K,V,P,H,S>::operator=(const heap_cache& other) -> heap_cache& {
 
 template<typename K, typename V, typename P, typename H, typename S>
 auto heap_cache<K,V,P,H,S>::operator=(heap_cache&& other) -> heap_cache& {
-  assert(this != &other);
+  UASSERT(this != &other);
   clear();
   max_size = other.max_size;
   heap = std::move(other.heap);
@@ -101,7 +103,7 @@ void heap_cache<K,V,P,H,S>::set_max_size(size_t max) {
 template<typename K, typename V, typename P,
          typename H, typename S>
 void heap_cache<K,V,P,H,S>::_del_back() {
-  assert(heap.size() > 1);
+  UASSERT(heap.size() > 1);
   keymap.erase(heap.back());
   heap.pop_back();
 }
@@ -119,8 +121,8 @@ void heap_cache<K,V,P,H,S>::_del_back_full() {
 template<typename K, typename V, typename P, typename H, typename S>
 void heap_cache<K,V,P,H,S>::increase_key(key_cref k) const {
   auto& c = keymap.at(k);
-  assert(c.loc < heap.size());
-  assert(c.loc > 0);
+  UASSERT(c.loc < heap.size());
+  UASSERT(c.loc > 0);
   while(c.loc > 1) {
     auto& parent = keymap.at(heap[c.loc/2]);
     if(parent.count >= c.count) break;
@@ -131,17 +133,17 @@ void heap_cache<K,V,P,H,S>::increase_key(key_cref k) const {
 
 template<typename K, typename V, typename P, typename H, typename S>
 void heap_cache<K,V,P,H,S>::_consistency_check() const {
-  assert(heap.size() >= 1);
-  assert(max_size >= heap.size()-1);
-  assert(max_size >= keymap.size());
-  assert(keymap.size() + 1 == heap.size());
-  assert(base_type::key_predicate(heap[0], key_type{}));
+  UASSERT(heap.size() >= 1);
+  UASSERT(max_size >= heap.size()-1);
+  UASSERT(max_size >= keymap.size());
+  UASSERT(keymap.size() + 1 == heap.size());
+  UASSERT(base_type::key_predicate(heap[0], key_type{}));
 #ifdef HCACHE_CHECK
   for(size_t i = keymap.size(); i > 1; --i)
   {
-    assert(heap[i] != nullptr);
-    assert(heap[i/2] != nullptr);
-    assert(heap[i]->count <= heap[i/2]->count);
+    UASSERT(heap[i] != nullptr);
+    UASSERT(heap[i/2] != nullptr);
+    UASSERT(heap[i]->count <= heap[i/2]->count);
   }
 #endif /* HCACHE_CHECK */
 }

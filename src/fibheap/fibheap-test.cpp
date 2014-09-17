@@ -9,7 +9,6 @@
 #include "fibheap/fibheap.hpp"
 
 #include <array>
-#include <cassert>
 #include <iostream>
 #include <random>
 
@@ -108,7 +107,7 @@ int main() {
   cout << "heap value after move:" << endl;
   cout << f << endl;
   cout << "Stress test for fibheap..." << endl;
-#ifdef NDEBUG
+#if (defined(NDEBUG) && !USE_UASSERT)
   int constexpr STRESS_REPS = 1e7;
 #else
   int constexpr STRESS_REPS = 1e3;
@@ -131,8 +130,8 @@ int main() {
       // Check correctness on about 25% of the runs
       if (0 <= val && val < MAX_KEYS) {
         fibheap<int>::key_type k = keyarr[val];
-        assert(k != fibheap<int>::key_type());
-        assert(k == moved.pop());
+        UASSERT(k != fibheap<int>::key_type());
+        UASSERT(k == moved.pop());
         keyarr[val] = nullptr;
       }
     }
@@ -140,9 +139,9 @@ int main() {
     moved.pop();
   for (int i = 0; i < MAX_KEYS; ++i)
     if (keyarr[i] != nullptr) {
-      assert(moved.top() == i);
+      UASSERT(moved.top() == i);
       fibheap<int>::key_type k = keyarr[moved.top()];
-      assert(k != fibheap<int>::key_type() && k == moved.pop());
+      UASSERT(k != fibheap<int>::key_type() && k == moved.pop());
     }
   while(!moved.empty())
     moved.pop();
