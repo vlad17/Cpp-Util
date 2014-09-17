@@ -1,3 +1,4 @@
+
 /*
  * Vladimir Feinberg
  * fibheap-test.cpp
@@ -108,9 +109,9 @@ int main() {
   cout << f << endl;
   cout << "Stress test for fibheap..." << endl;
 #if (defined(NDEBUG) && !USE_UASSERT)
-  int constexpr STRESS_REPS = 1e7;
+  int constexpr STRESS_REPS = 100000;
 #else
-  int constexpr STRESS_REPS = 1e3;
+  int constexpr STRESS_REPS = 1000;
 #endif
   int constexpr MAX_KEYS = STRESS_REPS/50;
   moved.clear();

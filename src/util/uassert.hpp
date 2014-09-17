@@ -53,7 +53,7 @@
   util::_util_uassert_internal::streamer(!(expr), __FILE__, __LINE__, #expr)
 #else
 #include <util/nullstream.hpp>
-#define UASSERT(expr) (util::nullstream << !(expr))
+#define UASSERT(expr) (util::nullstream{} << !(expr))
 #endif /* USE_UASSERT */
 
 #if USE_UASSERT

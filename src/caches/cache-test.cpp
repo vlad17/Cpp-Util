@@ -89,7 +89,7 @@ void cache_test(T lhc) {
 
 #if (defined(NDEBUG) && !USE_UASSERT)
   cout << "stress tests for heap cache...." << endl;
-  int constexpr STRESS_REPS = 1e7;
+  int constexpr STRESS_REPS = 1024 * 1024;
   int constexpr MAX_KEYSIZE = STRESS_REPS/100;
   for(int i = 0; i < STRESS_REPS; ++i)
   {
