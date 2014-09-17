@@ -6,8 +6,6 @@
 * Implements optional.
 */
 
-#include <cassert>
-
 namespace util {
 
 template<typename T>
@@ -54,14 +52,14 @@ auto optional<T>::operator=(const optional& other) -> optional& {
 template<typename T>
 template<typename... Args>
 void optional<T>::construct(Args&&... args) {
-  assert(!initialized);
+  UASSERT(!initialized);
   new (get()) T(std::forward<Args>(args)...);
   initialized = true;
 }
 
 template<typename T>
 void optional<T>::destruct() {
-  assert(initialized);
+  UASSERT(initialized);
   get()->~T();
   initialized = false;
 }

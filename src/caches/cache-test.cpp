@@ -87,7 +87,7 @@ void cache_test(T lhc) {
   cout << "after move (from assignment value) - size: " << lhc.size() ; cout << endl;
   lhc2.clear();
 
-#ifdef NDEBUG
+#if (defined(NDEBUG) && !USE_UASSERT)
   cout << "stress tests for heap cache...." << endl;
   int constexpr STRESS_REPS = 1e7;
   int constexpr MAX_KEYSIZE = STRESS_REPS/100;

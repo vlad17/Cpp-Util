@@ -49,6 +49,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${OUTDIR})
 
 #executable generation
 
+# libraries are always implicitly dependent on 'util'
 unset(ALL_LIBS CACHE)
 function(ADD_LIB)
   get_filename_component(FDIR ${CMAKE_CURRENT_SOURCE_DIR} NAME)
@@ -68,6 +69,7 @@ endfunction()
 enable_testing()
 
 # Uses additional arguments to add link libraries on top of the local one
+# always add implicit 'util' dependency
 function(ADD_EXEC name)
   get_filename_component(FDIR ${CMAKE_CURRENT_SOURCE_DIR} NAME)
   # check if local library exists
@@ -77,7 +79,7 @@ function(ADD_EXEC name)
   endif (result EQUAL -1)
   add_executable("${name}.exe" "${name}.cpp")
   add_test(NAME ${name} COMMAND "${name}.exe" WORKING_DIRECTORY ${OUTDIR})
-  target_link_libraries("${name}.exe" ${FDIR} ${ARGN})
+  target_link_libraries("${name}.exe" ${FDIR} util ${ARGN})
 endfunction()
 
 ### configure subdirectories

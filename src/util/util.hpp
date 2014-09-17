@@ -11,8 +11,6 @@
 #ifndef UTIL_UTIL_H_
 #define UTIL_UTIL_H_
 
-#include <cassert>
-
 // TODO this is just for compatibility, remove all uses later.
 #define INLINE
 

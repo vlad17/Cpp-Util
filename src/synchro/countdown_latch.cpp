@@ -8,16 +8,17 @@
 
 #include "synchro/countdown_latch.hpp"
 
-#include <cassert>
 #include <condition_variable>
 #include <mutex>
+
+#include <util/uassert.hpp>
 
 using namespace std;
 using namespace synchro;
 
 countdown_latch::countdown_latch(int wait) :
     unready_count_(wait) {
-  assert(wait > 0);
+  UASSERT(wait > 0);
 }
 
 countdown_latch::~countdown_latch() {
@@ -32,7 +33,7 @@ void countdown_latch::down() {
   {
     lock_guard<mutex> lk(lock_);
     if (unready_count_ == 0) return;
-    assert(unready_count_ > 0);
+    UASSERT(unready_count_ > 0);
     broadcast = !--unready_count_;
   }
   if (broadcast)
@@ -45,7 +46,7 @@ void countdown_latch::wait() {
 }
 
 void countdown_latch::reset(int wait) {
-  assert(wait > 0);
+  UASSERT(wait > 0);
   lock_guard<mutex> lk(lock_);
   unready_count_ = wait;
 }

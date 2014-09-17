@@ -21,17 +21,13 @@
 #define FIB_CHECK 0
 #endif
 
+#include <cmath>
+#include <cstddef>
 #include <list>
 #include <ostream>
-#include <vector>
 #include <queue>
-#include <cmath>
-#include <cassert>
-#include <cstddef>
-
-#if FIB_CHECK
 #include <unordered_set>
-#endif
+#include <vector>
 
 // TODO document
 

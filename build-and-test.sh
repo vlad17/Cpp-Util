@@ -14,6 +14,10 @@ cmake . -DCMAKE_BUILD_TYPE=release -DASSERTIONS_ON=1
 make -j$NJOBS
 ctest -j$NJOBS
 
+cmake . -DCMAKE_BUILD_TYPE=release -DASSERTIONS_ON=0
+make -j$NJOBS
+ctest -j$NJOBS
+
 ./release/mpmc-test.exe bench
 
 echo

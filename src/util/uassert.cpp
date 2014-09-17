@@ -33,14 +33,15 @@ const char* sansdirectory(const char* file) {
 
 streamer::streamer(bool print, const char* file, long line, const char* expr) :
     print_(print),
-    file_(sansdirectory(file)),
+    file_(file),
     line_(line),
     expr_(expr) {}
 
 streamer::~streamer() {
   if (print_) {
     stringstream sstr;
-    sstr << file_ << ":" << line_ << " Expr \'" << expr_ << "\' failed";
+    sstr << sansdirectory(file_) << ":" << line_
+         << " Expr \'" << expr_ << "\' failed";
     string str = sstr_.str();
     if (!str.empty()) sstr << ": " << str;
     else sstr << ".";
