@@ -51,7 +51,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${OUTDIR})
 
 unset(ALL_LIBS CACHE)
 function(ADD_LIB)
-  get_filename_component(FDIR ${CMAKE_CURRENT_LIST_DIR} NAME)
+  get_filename_component(FDIR ${CMAKE_CURRENT_SOURCE_DIR} NAME)
   add_library(${FDIR} ${ARGN})
   set(ALL_LIBS ${ALL_LIBS} ${FDIR} CACHE INTERNAL "")
 endfunction()
@@ -69,7 +69,7 @@ enable_testing()
 
 # Uses additional arguments to add link libraries on top of the local one
 function(ADD_EXEC name)
-  get_filename_component(FDIR ${CMAKE_CURRENT_LIST_DIR} NAME)
+  get_filename_component(FDIR ${CMAKE_CURRENT_SOURCE_DIR} NAME)
   # check if local library exists
   list(FIND ALL_LIBS "${FDIR}" result)
   if (result EQUAL -1)
