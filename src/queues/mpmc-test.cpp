@@ -121,8 +121,6 @@ bool same(X& x, const vector<int>& vec) {
   vecstream << "]";
   stringstream xstream;
   xstream << x;
-  string xstr = xstream.str();
-  string vstr = vecstream.str();
   return vecstream.str() == xstream.str();
 }
 
