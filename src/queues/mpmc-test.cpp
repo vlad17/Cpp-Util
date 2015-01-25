@@ -50,20 +50,17 @@ class boost_queue {
   boost_queue() {}
   void enqueue(T t) {
     impl.push(t);
-    cond.notify_one();
   }
   void dequeue() {
     int i;
-    while (!impl.pop(i)) {
-      unique_lock<mutex> lk(mtx);
-      cond.wait(lk, [this]{ return !empty(); });
-    }
+    // Boost only provides the equivalent of a 'try_dequeue'.
+    // The following loop mimics the same thing that 'dequeue' does.
+    while (!impl.pop(i))
+      std::this_thread::yield();
   }
   bool empty() { return impl.empty(); }
  private:
   boost::lockfree::queue<T> impl;
-  condition_variable cond;
-  mutex mtx;
 };
 #endif /* HAVE_BOOST */
 

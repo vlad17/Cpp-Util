@@ -73,8 +73,7 @@ namespace queues {
 
 template<typename T>
 bool shared_queue<T>::is_lock_free() const {
-  return std::atomic_is_lock_free(&head_)
-    && tail_.is_lock_free();
+  return std::atomic_is_lock_free(&head_) && tail_.is_lock_free();
 }
 
 template<typename T>
@@ -112,7 +111,7 @@ void shared_queue<T>::enqueue(node* n) noexcept {
                                 std::memory_order_relaxed);
 
   insert_version_.fetch_add(1, std::memory_order_relaxed);
-  empty_condition_.notify_one();
+  //  empty_condition_.notify_one();
 }
 
 template<typename T>
@@ -184,8 +183,7 @@ T shared_queue<T>::dequeue() {
     opt = try_dequeue();
     if (opt.valid())
       break;
-    std::unique_lock<std::mutex> lk(empty_mutex_);
-    empty_condition_.wait(lk, [this]{ return !empty(); });
+    std::this_thread::yield();
   }
   return std::move(opt.access());
 }

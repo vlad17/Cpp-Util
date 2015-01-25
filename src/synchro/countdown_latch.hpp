@@ -26,6 +26,7 @@ class countdown_latch {
   ~countdown_latch(); // releases all waiting threads.
   void down(); // does nothing if count is at 0
   void wait();
+  // Reset presumes there are no wait()-ing threads.
   void reset(int wait);
  private:
   std::mutex lock_;

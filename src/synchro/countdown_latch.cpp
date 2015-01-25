@@ -23,7 +23,7 @@ countdown_latch::countdown_latch(int wait) :
 
 countdown_latch::~countdown_latch() {
   // no need to acquire the lock - it's the user's fault if they
-  // are giving access accorss threads to a destructing object.
+  // are giving access across threads to a destructing object.
   ready_.notify_all();
 }
 
@@ -36,6 +36,9 @@ void countdown_latch::down() {
     UASSERT(unready_count_ > 0);
     broadcast = !--unready_count_;
   }
+  // Broadcast-after-unlock is OK here since it's the user's responsibility to
+  // reset the countdown latch in a synchronized manner, so we can expect there
+  // will be no "intercepting" threads who call wait() at this moment.
   if (broadcast)
     ready_.notify_all();
 }

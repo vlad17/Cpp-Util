@@ -9,17 +9,14 @@
  * the advice in The Art of Multiprocessor Programming.
  *
  * For the most part the queue's lock free, but it relies
- * on an atomic shared_ptr, which may not be (the condition
- * variable for empty queues and its mutex don't count).
+ * on an atomic shared_ptr, which may not be.
  */
 
 #ifndef QUEUES_SHARED_QUEUE_HPP_
 #define QUEUES_SHARED_QUEUE_HPP_
 
 #include <atomic>
-#include <condition_variable>
 #include <memory>
-#include <mutex>
 #include <ostream>
 
 #include "synchro/atomic_shared.hpp"
@@ -58,11 +55,6 @@ class shared_queue : public queue<T> {
   synchro::atomic_shared_ptr<node> head_;
   std::atomic<node*> tail_;
 
-  // Mutex and condition variable for blocked dequeuers waiting on
-  // the "empty" condition.
-  std::condition_variable empty_condition_;
-  std::mutex empty_mutex_;
-
   // Below versioning needed for empty()
   std::atomic<size_t> insert_version_; // number enqueued
   std::atomic<size_t> remove_version_; // number dequeued
@@ -78,7 +70,7 @@ class shared_queue : public queue<T> {
   }
   virtual ~shared_queue();
   // Oberservers - full() and empty() may not be very meaningful.
-  bool is_lock_free() const; // ignores the std::condition_variable
+  bool is_lock_free() const;
   virtual bool full() const { return false; }
   virtual bool empty() const;
   // Strong guarantee for enqueues

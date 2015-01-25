@@ -2,8 +2,9 @@ Cpp-Util
 
 This is a collection of some data structures I have been working on recently.
 
-My MPMC queue seems to beat boost's! check out results at the end of this
-document, and the test if you don't believe me.
+My MPMC queue seems to be on par with, if occasionally better, than boost's!
+check out results at the end of this document, and the test if you don't believe 
+me.
 
 Requires cmake 2.6+ and a c++11 supporting compiler.
 
@@ -50,18 +51,20 @@ TODO:
         speed up assertions (worth it?)
 	Use a lazily updated bool instead of insert_version_ and remove_version to denote "empty" in shared_queue.h
 
+(Run `./release/mpmc-test.exe bench boost`)
+
 MPMC Queue Benchmark
 
 Boost Queue
-	Enqueues (8x100000): 136ms
-	Dequeues (8x100000): 82ms
-	Fair mpmc (~1000000 items, 4 enq, 4 deq): 1063ms
-	Enqueue-weighted mpmc (~1000000 items, 6 enq, 2 deq): 601ms
-	Dequeue-weighted mpmc (~1000000 items, 2 enq, 6 deq): 1778ms
+	Enqueues (8x100000): 127ms
+	Dequeues (8x100000): 78ms
+	Fair mpmc (~1000000 items, 4 enq, 4 deq): 201ms
+	Enqueue-weighted mpmc (~1000000 items, 6 enq, 2 deq): 148ms
+	Dequeue-weighted mpmc (~1000000 items, 2 enq, 6 deq): 179ms
 
 Shared Queue
-	Enqueues (8x100000): 117ms
-	Dequeues (8x100000): 969ms
-	Fair mpmc (~1000000 items, 4 enq, 4 deq): 183ms
-	Enqueue-weighted mpmc (~1000000 items, 6 enq, 2 deq): 192ms
-	Dequeue-weighted mpmc (~1000000 items, 2 enq, 6 deq): 142ms
+	Enqueues (8x100000): 109ms
+	Dequeues (8x100000): 1117ms
+	Fair mpmc (~1000000 items, 4 enq, 4 deq): 134ms
+	Enqueue-weighted mpmc (~1000000 items, 6 enq, 2 deq): 158ms
+	Dequeue-weighted mpmc (~1000000 items, 2 enq, 6 deq): 107ms
