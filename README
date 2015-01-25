@@ -12,8 +12,8 @@ Requires boost installed and available in system headers.
 
 To run tests:
 cmake . # specify -DCMAKE_CXX_COMPILER=... if it's not g++
-make -j8 # 8 or whatever number of supported threads
-ctest
+make -j`nproc`
+ctest -j`nproc`
 
 Other cmake options are:
 -DCMAKE_BUILD_TYPE=(debug|release) - specifies build setting
