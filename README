@@ -28,6 +28,7 @@ TODO:
         hazard_queue (same as shared_queue, but instead of shared_ptr use hazard_ptr, also empty can use head == tail + invalid)
         check hazard_queue vs shared_queue
         document throws for pthreads (look at the "too many readers" return val, maybe spin?)
+        asserts compute EVERYTHING, even if nothing is printed. Figure it out.
         cache and fibheap are terribly slow. speed them up.
         minimal flag parser
         suffix tries + ukkonen construct
