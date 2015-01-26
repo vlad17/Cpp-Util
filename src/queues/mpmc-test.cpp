@@ -13,7 +13,6 @@
 #include <future>
 #include <iostream>
 #include <iomanip>
-#include <random>
 #include <string>
 #include <sstream>
 #include <thread>
@@ -30,9 +29,6 @@
 
 using namespace std;
 using namespace queues;
-
-const int SEED = 0;
-minstd_rand0 gen(SEED);
 
 template<template<typename> class T>
 void unit_test();

@@ -24,24 +24,18 @@ For quick building and testing, use "chmod 700 build-and-test.sh"
 Then ./build-and-test.sh
 
 TODO:
-        generalized randomness seed setting
-        random in cdl
-        start/complete test functions (print like ctest)
         hazard_ptr structure (http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890)
         hazard_queue (same as shared_queue, but instead of shared_ptr use hazard_ptr, also empty can use head == tail + invalid)
         check hazard_queue vs shared_queue
         document throws for pthreads (look at the "too many readers" return val, maybe spin?)
         cache and fibheap are terribly slow. speed them up.
-        fix up tests everywhere
         minimal flag parser
         suffix tries + ukkonen construct
         implement SingularThreadpool (1t) (mpsc)
         WorkStealingThreadpool # (using mpmc for each thread)
         clean up TODOs in code
-        Create exception-based test file - use multithreaded exceptions.
         create test-testandset spinlock, and then queuelock (with everyhting, Art of mpp ch.7) 
         Test against boost spinlock
-        Create assert-based tests
 	concurrent heap_cache (finish testing & debugging)
 	exact_heap_cache (see lfu_cache.h) - make separate method in main for comparison/stress
 	linked_cache (see lfu_cache.h)
