@@ -41,19 +41,28 @@ template<typename T>
 class shared_queue : public queue<T> {
  private:
   struct node {
-    node() : next(nullptr), val() {}
-    node(T&& val) : next(nullptr), val(std::forward<T>(val)) {}
+    node() : delete_self(true) {}
+    node(T&& val) : val(std::forward<T>(val)), delete_self(true) {}
 
-    std::atomic<node*> next;
+    synchro::atomic_shared_ptr<node> next;
     util::atomic_optional<T> val;
+
+    // Ugly hack for deletion, see ~shared_queue() for details.
+    bool delete_self;
+    static void deleter(node* self) { if (self->delete_self) delete self; }
   };
 
   // Shared pointer at the head to avoid ABA problem -
   // each dequeuer take a local copy which ensures that the node
   // is not deleted by other dequeuers (so no new node will
-  // have the same address as)
+  // have the same address as).
+  //
+  // I know in some sense using this is sort-of like cheating
+  // and I might as well use Java, but this at least lets me get
+  // a correct implementation down (before moving on to hazard pointers).
   synchro::atomic_shared_ptr<node> head_;
-  std::atomic<node*> tail_;
+  // TODO: potential optimization, store in different cache lines
+  synchro::atomic_shared_ptr<node> tail_;
 
   // Below versioning needed for empty()
   std::atomic<size_t> insert_version_; // number enqueued
@@ -64,8 +73,9 @@ class shared_queue : public queue<T> {
  public:
   shared_queue() :
     insert_version_(0), remove_version_(0) {
-    auto sptr = std::make_shared<node>();
-    tail_.store(sptr.get(), std::memory_order_relaxed);
+    node* n = new node;
+    std::shared_ptr<node> sptr(n, node::deleter);
+    std::atomic_store_explicit(&tail_, sptr, std::memory_order_relaxed);
     std::atomic_store_explicit(&head_, sptr, std::memory_order_relaxed);
   }
   virtual ~shared_queue();

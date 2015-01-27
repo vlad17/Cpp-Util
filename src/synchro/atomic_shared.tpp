@@ -61,8 +61,15 @@ constexpr bool has_atomic_overloads_f(...) { return false; }
 // by just using has_atomic_overloads<T>::value.
 template<class T>
 struct has_atomic_overloads {
-    static const T t;
-    static constexpr bool value = has_atomic_overloads_f(const_cast<T*>(&t));
+#if __GNUC__ < 5
+  // gcc bug 59937 with constexpr prevents "proper" derivation of
+  // whether the std::atomic_* methods are defined. Luckily this is fixed
+  // by gcc 5, before which there are no atomic overloads anyway
+  static constexpr bool value = false;
+#else
+  static const T t;
+  static constexpr bool value = has_atomic_overloads_f(const_cast<T*>(&t));
+#endif
 };
 
 // Selects the shared pointer if library supports atomic shared pointer

@@ -60,7 +60,7 @@ class boost_queue {
 };
 #endif /* HAVE_BOOST */
 
-
+template<class T> string prvec(const T&);
 vector<int> read_strvec(string);
 
 int main(int argc, char** argv) {
@@ -101,20 +101,18 @@ void complete(const string& s = "...complete", std::ostream& outs = cout) {
   outs << right << s << endl;
 }
 
-// X should print [...]
-template<class X>
-bool same(X& x, const vector<int>& vec) {
+template<typename C>
+string prvec(const C& vec) {
   stringstream vecstream;
   vecstream << "[";
   if (!vec.empty()) {
-    vecstream << vec.front();
-    for (int i = 1 ; i < vec.size(); ++i)
-      vecstream << ", " << vec[i];
+    auto it = vec.begin();
+    vecstream << *it++;
+    for (; it != vec.end(); ++it)
+      vecstream << ", " << *it;
   }
   vecstream << "]";
-  stringstream xstream;
-  xstream << x;
-  return vecstream.str() == xstream.str();
+  return vecstream.str();
 }
 
 template<class X>
@@ -122,6 +120,12 @@ string as_string(const X& x) {
   stringstream sstr;
   sstr << x;
   return sstr.str();
+}
+
+// X should print [...]
+template<class X>
+bool same(const X& x, const vector<int>& vec) {
+  return as_string(x) == prvec(vec);
 }
 
 template<template<typename> class T>
@@ -185,6 +189,7 @@ vector<int> read_strvec(string s) {
   istringstream in(s);
   in.get();
   vector<int> out;
+  if (s.size() == 1) return out;
   while (!in.eof()) {
     int x = 0;
     in >> x;
@@ -224,6 +229,7 @@ void test_multithreaded() {
   // is going on.
 
   // Gives unique interval for concurrent inserters.
+
   start("concurrent inserts");
 
   atomic<int> cdl(kNumEnqueuers); // todo replace with a countdown latch
@@ -231,6 +237,7 @@ void test_multithreaded() {
   UASSERT(testq.empty());
   typedef tuple<vector<int>, vector<int>, vector<int> > threevec;
   vector<future<threevec> > futs;
+
   for (int i = 0; i < kNumEnqueuers; ++i)
     futs.push_back(async(launch::async,
                          [&](int idx) -> threevec {
@@ -259,7 +266,10 @@ void test_multithreaded() {
     tie(start, mid, end) = interval_mid(i, kItemsPerEnqueuer);
 
     for (int j : before)
-      UASSERT(!in_range(j, start, end));
+      UASSERT(!in_range(j, start, end))
+          << "Found " << j << " before [" << start << ", " << end << ")"
+          << " dequeuer started.";
+
 
     int current = start;
     for (int j : half)
