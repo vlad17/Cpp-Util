@@ -27,7 +27,8 @@ For quick building and testing, use "chmod 700 build-and-test.sh"
 Then ./build-and-test.sh
 
 TODO:
-        hazard_ptr structure (http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890)
+        hazard_ptr structure (http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890) -> Note Retire() is called only with 1 thread, else double delete!! That's when you're certain
+you have ownership (i.e. you got a successfull cas that moved the head forward). Future improvements to hazard pointers would be a global GC mechanism.  See if you can provide a typesafe interface to HPs with templates backed by void* pHazard list...
         hazard_queue (same as shared_queue, but instead of shared_ptr use hazard_ptr, also empty can use head == tail + invalid)
         check hazard_queue vs shared_queue
         try using spinlocks instead of mutexes in the atomic_shared_ptr (the lock doesn't have to protect much, so it's probably better if you generate a lot of atomic_shared_ptrs).
