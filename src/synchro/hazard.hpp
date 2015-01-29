@@ -13,11 +13,16 @@
 
   It is important to note that hazard_ptrs are to be used for managing
   lifetimes. They don't protect concurrent access to data pointed-to by the
-  pointers they protect.
+  pointers they protect. This INCLUDES the synchronization of previous writes
+  made by a thread with a hazard_ptr. The hazard_ptr does NOT establish
+  any happens-before relation to cross-thread writes and reads to the
+  pointed-to data.
 */
 
 #ifndef SYNCHRO_HAZARD_HPP_
 #define SYNCHRO_HAZARD_HPP_
+
+#include <atomic>
 
 namespace synchro {
 
@@ -52,8 +57,13 @@ class hazard_ptr {
   void acquire(T* ptr);
   void acquire(const std::atomic<T*>& ptr);
 
+  void reset() { acquire(nullptr); }
+
   // Pointer-getters.
-  // TODO
+  T* get() const { return ptr_; }
+  T& operator*() const { return *ptr_; }
+  T* operator->() const { return ptr_; }
+  explicit operator bool() const { return ptr_; }
 
   // Should only be called once. hazard_pointer users should
   // make sure that this is called once by only allowing a deletion
@@ -67,11 +77,13 @@ class hazard_ptr {
   static void schedule_deletion(T* ptr);
 
  private:
-  class hazard_record;
+  class _synchro_hazard_internal::hazard_record;
   T* ptr_; // local non-atomic copy.
   hazard_record* record_;
 };
 
 } // namespace synchro
+
+#include "synchro/hazard.tpp"
 
 #endif /* SYNCHRO_HAZARD_HPP_ */
