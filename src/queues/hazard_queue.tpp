@@ -120,7 +120,9 @@ util::optional<T> hazard_queue<T>::try_dequeue()
   return {std::move(*hazard_head->val_.get())};
 }
 
-// TODO optimization: do manual RVO on the optional by inlining?
+// TODO: optimization: do manual RVO on the optional by inlining?
+//----- The above will also let us get rid of using the ::optional, which
+// may provide further improvements.
 template<typename T>
 T hazard_queue<T>::dequeue() {
   util::optional<T> opt;
