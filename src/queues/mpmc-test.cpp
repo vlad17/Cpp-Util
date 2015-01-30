@@ -71,22 +71,35 @@ int main(int argc, char** argv) {
   bool boost = argc > 2 && strcmp(argv[2], "boost") == 0;
 #endif /* HAVE_BOOST */
   if (!bench) {
-    cout << "MPMC Queue Unit Test..." << endl;
+    cout << "MPMC Queue Unit Tests..." << endl;
+
     cout << "\nShared Queue" << endl;
     cout << "\tUnit testing:" << endl;
     unit_test<shared_queue>();
     cout << "\tMultithreaded test:" << endl;
     test_multithreaded<shared_queue>();
+
+    cout << "\nHazard Queue" << endl;
+    cout << "\tUnit testing:" << endl;
+    unit_test<hazard_queue>();
+    cout << "\tMultithreaded test:" << endl;
+    test_multithreaded<hazard_queue>();
+
   } else {
     cout << "MPMC Queue Benchmark" << endl;
+
 #ifdef HAVE_BOOST
     if (boost) {
       cout << "\nBoost Queue" << endl;
       bench_queue<boost_queue>();
     }
 #endif /* HAVE_BOOST */
+
     cout << "\nShared Queue" << endl;
     bench_queue<shared_queue>();
+
+    cout << "\nHazard Queue" << endl;
+    bench_queue<hazard_queue>();
   }
   return 0;
 }

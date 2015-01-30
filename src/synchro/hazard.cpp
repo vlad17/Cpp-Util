@@ -166,6 +166,9 @@ void scan_delete() {
 
 retired_list::~retired_list() {
   // this == &thread_retired
+  // TODO: optimization: is this scan_delete() worth it?
+  // perhaps it doesn't get much done anyway, maybe just move to global?
+  // certainly means less destructor work...
   scan_delete();
   if (!rlist.empty())
     global_retired.add_rlist(std::move(rlist));

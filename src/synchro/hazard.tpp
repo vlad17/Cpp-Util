@@ -79,7 +79,8 @@ void hazard_ptr<T>::acquire(T* ptr) {
 
 template<typename T>
 void hazard_ptr<T>::acquire(const std::atomic<T*>& ptr) {
-  T* oldval, newval = ptr.load(std::memory_order_relaxed);
+  T* oldval;
+  T* newval = ptr.load(std::memory_order_relaxed);
   do {
     oldval = newval;
     record_->publish(oldval);

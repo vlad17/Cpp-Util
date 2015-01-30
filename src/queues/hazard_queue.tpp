@@ -64,6 +64,8 @@ void hazard_queue<T>::enqueue(node* n) noexcept {
 template<typename T>
 util::optional<T> hazard_queue<T>::try_dequeue()
 {
+  // TODO: optimization for dequeue() - only take one hazard_head,
+  // spin on that one, instead of making a new one each time.
   synchro::hazard_ptr<node> hazard_head;
 
   // Cycle until we can "claim" a node for the dequeuer, with the oldhead
@@ -93,22 +95,27 @@ util::optional<T> hazard_queue<T>::try_dequeue()
     if (std::atomic_compare_exchange_weak_explicit(
             &head_, &oldhead, newhead, std::memory_order_release,
             std::memory_order_relaxed)) {
-      // We have claimed oldhead successfully, but it could be invalid
-      // (if the queue was empty and one insert occured)
-      if (oldhead->val_.valid())
-        break;
+      // We have claimed oldhead successfully.
+      // Recall hazard_head == oldhead, so we can schedule deletion
+      // now (we're safe to use the pointer until we get out of scope).
+      synchro::hazard_ptr<node>::schedule_deletion(hazard_head.get());
+
+      // The head could still be invalid.
       // If we had a successful CAS but oldhead is invalid, then this
       // is the case where we were waiting on a head == tail case
       // but tail moved, so we moved head forward to a valid node
       // as well. Just restart dequeue() loop in this case.
+      if (oldhead->val_.valid())
+        break;
     }
   }
 
-  remove_version_.fetch_add(1, std::memory_order_relaxed);
+  // NOTE: we do not schedule deletion here; only the thread that
+  // successfully CAS-es the head off (guaranteed to just be one)
+  // may schedule the deletion. Notice two break statements above
+  // lead to two paths that end up here.
 
-  // Recall hazard_head == oldhead from before, so we can schedule deletion
-  // now (we're safe to use the pointer until we get out of scope).
-  synchro::hazard_ptr<node>::schedule_deletion(hazard_head.get());
+  remove_version_.fetch_add(1, std::memory_order_relaxed);
 
   return {std::move(*hazard_head->val_.get())};
 }
