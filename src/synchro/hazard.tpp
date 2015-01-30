@@ -68,6 +68,7 @@ hazard_ptr<T>& hazard_ptr<T>::operator=(hazard_ptr&& other) {
   record_ = other.record_;
   other.ptr_ = nullptr;
   other.record_ = nullptr;
+  return *this;
 }
 
 template<typename T>

@@ -41,6 +41,8 @@ namespace _synchro_hazard_internal {
 template<typename T>
 class hazard_ptr {
  public:
+  // Upon destruction (or assignment), the hazard_ptr's currently protected
+  // pointer is no longer protected.
   hazard_ptr();
   ~hazard_ptr();
 
