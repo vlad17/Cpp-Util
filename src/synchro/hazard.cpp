@@ -17,6 +17,8 @@
 #include <utility>
 #include <vector>
 
+#include <iostream>
+
 using std::pair;
 using std::unordered_set;
 using std::vector;
@@ -35,12 +37,9 @@ namespace {
 // until unlink time.
 class hazard_list {
  public:
-  hazard_list() : head_(nullptr), len_(0), on_(true) {}
+  hazard_list() : head_(nullptr), len_(0) {}
   ~hazard_list() {
-    // Turn the list "off" so that deletions become no longer dependent
-    // on the hazard record list, which we can then delete.
-    on_.store(false, std::memory_order_relaxed);
-    for (auto prev = head_.load(std::memory_order_acquire); prev;) {
+    for (auto prev = head(); prev;) {
       auto next = prev->next();
       delete prev;
       prev = next;
@@ -48,7 +47,6 @@ class hazard_list {
   }
 
   static hazard_record* head() {
-    if (!global_list_.on_.load(std::memory_order_relaxed)) return nullptr;
     // Use "acquire" semantics so we can read the 'next_' pointer.
     return global_list_.head_.load(std::memory_order_acquire);
   }
@@ -70,14 +68,52 @@ class hazard_list {
   std::atomic<bool> on_;
   static hazard_list global_list_;
 };
-hazard_list hazard_list::global_list_;
+
+typedef vector<pair<void*, hazard_record::deleter_t> > rlist_t;
+
+// We need a 'global_retired' list to "pick up the scraps" left by
+// writer threads that exited and couldn't clear all their retired pointers.
+class global_retired_list {
+ public:
+  ~global_retired_list() {
+    // For each node, clear the associated rlist, then delete the node.
+    for (auto prev = head_.load(std::memory_order_acquire); prev;) {
+      auto next = prev->next_;
+      for (auto p : prev->to_retire_) p.second(p.first);
+      delete prev;
+      prev = next;
+    }
+  }
+  void add_rlist(rlist_t rlist) {
+    node* next = new node(std::move(rlist));
+    auto oldhead = head_.load(std::memory_order_relaxed);
+    do next->next_ = oldhead;
+    while (!head_.compare_exchange_weak(oldhead, next,
+                                        std::memory_order_release,
+                                        std::memory_order_relaxed));
+  }
+
+ private:
+  struct node {
+    node(rlist_t rlist) : next_(nullptr), to_retire_(std::move(rlist)) {}
+    node* next_;
+    rlist_t to_retire_;
+  };
+
+  std::atomic<node*> head_;
+};
 
 // Thread-local "retired list" of pointers discarded by this thread.
 struct retired_list {
   ~retired_list();
-  vector<pair<void*, hazard_record::deleter_t> > rlist;
+  rlist_t rlist;
 };
 
+// Notice intentional order of definition. C++11 ensures the destructors
+// will be called in reverse order of construction, so all thread-local
+// retired lists will be destroyed before the global list is.
+hazard_list hazard_list::global_list_;
+global_retired_list global_retired;
 thread_local retired_list thread_retired;
 
 // Thread iterates through the global hazard pointer list, searching
@@ -88,6 +124,7 @@ thread_local retired_list thread_retired;
 void scan_delete() {
   // TODO: potential optimization: pre-alloc len() size.
   unordered_set<void*> snap;
+  rlist_t filtered;
   for (auto rec = hazard_list::head(); rec; rec = rec->next()) {
     auto ptr = rec->protected_ptr();
     if (ptr) snap.insert(ptr);
@@ -95,12 +132,17 @@ void scan_delete() {
   for (auto p : thread_retired.rlist) {
     auto ptr = p.first;
     auto del = p.second;
-    if (snap.find(ptr) == snap.end())
-      del(ptr);
+    if (snap.find(ptr) == snap.end()) del(ptr);
+    else filtered.push_back(p);
   }
+  thread_retired.rlist.swap(filtered);
 }
 
-retired_list::~retired_list() { scan_delete(); }
+retired_list::~retired_list() {
+  // this == &thread_retired
+  scan_delete();
+  if (!rlist.empty()) global_retired.add_rlist(std::move(rlist));
+}
 
 } // anonymous namespace
 

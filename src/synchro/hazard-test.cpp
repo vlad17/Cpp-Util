@@ -95,7 +95,7 @@ int main(int, char**) {
     hazard_tester test;
     for (int i = 0; i < kPtrs; ++i) test.add(i);
     for (int i = 0; i < kPtrs; ++i) test.check_valid(i);
-    static const int numWrites = kPtrs / kWriters;
+    static const int numWrites = kPtrs / kWriters; // divides evenly, important!
     static const int numReads = kPtrs / kReaders;
 
     vector<future<void> > reader_futs;
@@ -129,11 +129,11 @@ int main(int, char**) {
              }, i));
     // Release half first, just to make sure it's still ok to read even
     // when gc is going on.
+    for (auto& fut : writer_futs) fut.get();
     for (int i = 0; i < kReaders / 2; ++i)
       kr_array[i].store(false, std::memory_order_relaxed);
     for (int i = 0; i < kReaders / 2; ++i)
       reader_futs[i].get();
-    for (auto& fut : writer_futs) fut.get();
 
     // Reap remaining readers.
     for (int i = kReaders / 2; i < kReaders; ++i)
