@@ -26,6 +26,7 @@
 #include "util/uassert.hpp"
 #include "queues/queue.hpp"
 #include "queues/shared_queue.hpp"
+#include "queues/hazard_queue.hpp"
 
 using namespace std;
 using namespace queues;

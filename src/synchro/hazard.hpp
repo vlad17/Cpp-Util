@@ -27,7 +27,7 @@
 namespace synchro {
 
 namespace _synchro_hazard_internal {
-  class hazard_record;
+class hazard_record; // Obviously, should not be used.
 } // namespace _synchro_hazard_internal
 
 // hazard_ptr itself is NOT thread safe. However, it may be used to ensure that
@@ -38,6 +38,15 @@ namespace _synchro_hazard_internal {
 // really need to (you can just protect void*). I haven't really had a need
 // to offer multi-type hazard_ptrs yet, so the additional type safety
 // shouldn't be an issue.
+//
+// hazard_ptr values may not have static or thread_local storage duration.
+//
+// A note on ownership: hazard_ptr takes no responsibility for the lifetimes
+// of the pointers it protects. It is up to the user to manage such lifetimes.
+// However, hazard_ptr only protects against deltetions made through the
+// schedule_deletion() method. User should only use manual deletion
+// in synchronized conditions, when there are no readers depending on
+// hazard_ptr guards.
 template<typename T>
 class hazard_ptr {
  public:

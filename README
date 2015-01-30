@@ -27,9 +27,9 @@ For quick building and testing, use "chmod 700 build-and-test.sh"
 Then ./build-and-test.sh
 
 TODO:
-        hazard_ptr structure + testing
         hazard_queue (same as shared_queue, but instead of shared_ptr use hazard_ptr, also empty can use head == tail + invalid)
         check hazard_queue vs shared_queue
+        hazard_queue is_lock_free overload.
         try using spinlocks instead of mutexes in the atomic_shared_ptr (the lock doesn't have to protect much, so it's probably better if you generate a lot of atomic_shared_ptrs).
         document throws for pthreads (look at the "too many readers" return val, maybe spin?)
         asserts compute EVERYTHING, even if nothing is printed. Figure it out.
@@ -48,7 +48,7 @@ TODO:
 	fibheap (check file for TODOs)
 	valgrind check everything
         speed up assertions (worth it?)
-	Use a lazily updated bool instead of insert_version_ and remove_version to denote "empty" in shared_queue.h
+	Use a lazily updated bool instead of insert_version_ and remove_version to denote "empty" in shared_queue.hpp (also hazard_queue.hpp)
         Future improvements to hazard pointers would be a global GC mechanism that cleans up the global_list_.
 
 (Run `./release/mpmc-test.exe bench boost`)
