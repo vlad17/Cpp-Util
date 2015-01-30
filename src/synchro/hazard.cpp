@@ -70,6 +70,7 @@ class hazard_list {
   std::atomic<bool> on_;
   static hazard_list global_list_;
 };
+hazard_list hazard_list::global_list_;
 
 // Thread-local "retired list" of pointers discarded by this thread.
 struct retired_list {
@@ -108,6 +109,10 @@ hazard_record::hazard_record() :
 
 void* hazard_record::protected_ptr() {
   return protected_ptr_.load(std::memory_order_relaxed);
+}
+
+hazard_record* hazard_record::next() const {
+  return next_;
 }
 
 bool hazard_record::active() const {

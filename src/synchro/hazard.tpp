@@ -29,7 +29,7 @@ class hazard_record {
   void deactivate(); // null, then deactivate.
   void publish(void* p) { protected_ptr_.store(p, std::memory_order_relaxed); }
   void* protected_ptr();
-  hazard_record* next();
+  hazard_record* next() const;
 
  private:
   bool active() const;

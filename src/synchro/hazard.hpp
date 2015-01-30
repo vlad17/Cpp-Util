@@ -84,6 +84,9 @@ class hazard_ptr {
   // acquire new hazard pointers for the parameter pointer. If an
   // atomic 'unlinking' of the type above occured, this condition is
   // already met automatically.
+  //
+  // The 'ptr' will be destructed (via a call to 'delete') at the latest
+  // during thread_local destruction time.
   static void schedule_deletion(T* ptr);
 
  private:

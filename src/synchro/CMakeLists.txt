@@ -7,5 +7,6 @@ ADD_LIB(
 )
 
 ADD_EXEC(ptw-test)
+ADD_EXEC(hazard-test)
 ADD_EXEC(cdl-test util)
 
