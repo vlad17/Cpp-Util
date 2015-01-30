@@ -196,11 +196,19 @@ shared_queue<T>::~shared_queue() {
   // Usually, the node deletes itself (i.e., during normal queue operation
   // in its lifetime). However, during destruction we disable for the reasons
   // above.
+  //
+  // We also take care to clear out shared pointers to nodes, so that we're
+  // not left with the local variable 'i' being the second-to-last
+  // shared owner of the node (we want it to be exactly the last one).
 
   auto oldhead = std::atomic_load_explicit(&head_, std::memory_order_acquire);
-  for (auto i = std::atomic_load_explicit(&oldhead->next,
-                                          std::memory_order_acquire);
-       i != nullptr;) {
+  auto start = std::atomic_load_explicit(&oldhead->next,
+                                         std::memory_order_acquire);
+  std::atomic_store_explicit(&oldhead->next, std::shared_ptr<node>(),
+                             std::memory_order_relaxed);
+  auto oldtail = std::atomic_load_explicit(&tail_, std::memory_order_relaxed);
+  for (auto i = start; i != oldtail && i != nullptr;) {
+    start.reset();
     auto to_delete = i.get();
     to_delete->delete_self = false;
 
@@ -211,6 +219,10 @@ shared_queue<T>::~shared_queue() {
                                std::memory_order_relaxed);
     delete to_delete;
   }
+
+  // Let the queue's shared_ptrs take care of their own memory.
+  oldhead->delete_self = true;
+  oldtail->delete_self = true;
 }
 
 // Requires dequeuers are not operating on the queue.
