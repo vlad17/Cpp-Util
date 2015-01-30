@@ -90,6 +90,7 @@ void hazard_ptr<T>::acquire(const std::atomic<T*>& ptr) {
 
 template<typename T>
 void hazard_ptr<T>::schedule_deletion(T* ptr) {
+  if (!ptr) return; // don't take up space with a nullptr.
   _synchro_hazard_internal::hazard_record::schedule_deletion(ptr, ptr_deleter);
 }
 

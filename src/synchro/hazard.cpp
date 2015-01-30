@@ -17,8 +17,6 @@
 #include <utility>
 #include <vector>
 
-#include <iostream>
-
 using std::pair;
 using std::unordered_set;
 using std::vector;
@@ -26,6 +24,19 @@ using namespace synchro;
 using namespace _synchro_hazard_internal;
 
 namespace {
+
+// Generic function which goes through a singly-linked list and deletes
+// its elements, allowing a manual per-node deleter to be called before
+// each node is deleted itself.
+template<typename Node, typename Func>
+void delete_slist(Node head, Func f) {
+  for (auto prev = head; prev;) {
+    auto next = prev->next();
+    f(prev);
+    delete prev;
+    prev = next;
+  }
+}
 
 // This file maintains the static
 // executable-wide hazard pointer list and thread-local retired lists.
@@ -38,13 +49,7 @@ namespace {
 class hazard_list {
  public:
   hazard_list() : head_(nullptr), len_(0) {}
-  ~hazard_list() {
-    for (auto prev = head(); prev;) {
-      auto next = prev->next();
-      delete prev;
-      prev = next;
-    }
-  }
+  ~hazard_list() { delete_slist(head(), [](void*){}); }
 
   static hazard_record* head() {
     // Use "acquire" semantics so we can read the 'next_' pointer.
@@ -55,8 +60,13 @@ class hazard_list {
     return global_list_.head_.compare_exchange_weak(
         expect, desired, std::memory_order_release, std::memory_order_relaxed);
   }
+  // Note 'len' refers to the number of hazard pointers -in use-, not the
+  // number of hazard records.
   static void incr_len() {
     global_list_.len_.fetch_add(1, std::memory_order_relaxed);
+  }
+  static void sub_len() {
+    global_list_.len_.fetch_sub(1, std::memory_order_relaxed);
   }
   static size_t len() {
     return global_list_.len_.load(std::memory_order_relaxed);
@@ -73,16 +83,18 @@ typedef vector<pair<void*, hazard_record::deleter_t> > rlist_t;
 
 // We need a 'global_retired' list to "pick up the scraps" left by
 // writer threads that exited and couldn't clear all their retired pointers.
+// This list is typically held very small, since active writer threads
+// constantly "pick up the slack" by "stealing" the global retried list
+// and using it as their own.
 class global_retired_list {
  public:
+  global_retired_list() : head_(nullptr) {}
   ~global_retired_list() {
     // For each node, clear the associated rlist, then delete the node.
-    for (auto prev = head_.load(std::memory_order_acquire); prev;) {
-      auto next = prev->next_;
-      for (auto p : prev->to_retire_) p.second(p.first);
-      delete prev;
-      prev = next;
-    }
+    delete_slist(head_.load(std::memory_order_acquire),
+                 [](node* n) {
+                   for (auto p : n->to_retire_) p.second(p.first);
+                 });
   }
   void add_rlist(rlist_t rlist) {
     node* next = new node(std::move(rlist));
@@ -92,10 +104,24 @@ class global_retired_list {
                                         std::memory_order_release,
                                         std::memory_order_relaxed));
   }
+  void steal(rlist_t& to_add) {
+    // Once the 'head_' has been stolen, for each node,
+    // copy the contents of the associated rlist to the current node's
+    // list.
+    // TODO: optimization: if rlist_t itself was just a singly-linked
+    // vector chain (separate module implementation needed), then
+    // instead of copies these could just be a couple pointer moves.
+    delete_slist(head_.exchange(nullptr, std::memory_order_relaxed),
+                 [&to_add](node* n) {
+                   const auto& rlist = n->to_retire_;
+                   to_add.insert(to_add.end(), rlist.begin(), rlist.end());
+                 });
+  }
 
  private:
   struct node {
     node(rlist_t rlist) : next_(nullptr), to_retire_(std::move(rlist)) {}
+    node* next() const { return next_; }
     node* next_;
     rlist_t to_retire_;
   };
@@ -141,7 +167,8 @@ void scan_delete() {
 retired_list::~retired_list() {
   // this == &thread_retired
   scan_delete();
-  if (!rlist.empty()) global_retired.add_rlist(std::move(rlist));
+  if (!rlist.empty())
+    global_retired.add_rlist(std::move(rlist));
 }
 
 } // anonymous namespace
@@ -190,6 +217,8 @@ hazard_record* hazard_record::activated_record() {
 
 void hazard_record::schedule_deletion(void* ptr, deleter_t deleter) {
   thread_retired.rlist.emplace_back(ptr, deleter);
+  // Pick up any trash left around by others.
+  global_retired.steal(thread_retired.rlist);
   // Use of magic constant 5/4 upon recommendation from source.
   // Anything >1 will allow for constant-time amortization.
   if (thread_retired.rlist.size() >= 5 * hazard_list::len() / 4)
@@ -205,4 +234,6 @@ void hazard_record::deactivate() {
   // saving on an atomic read.
   publish(nullptr);
   active_.store(false, std::memory_order_relaxed);
+  // Reduce the number of hazard records in use.
+  hazard_list::sub_len();
 }

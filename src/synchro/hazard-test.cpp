@@ -91,16 +91,19 @@ int main(int, char**) {
 
   cout << "=====> Testing multithreaded execution" << endl;
   {
-    static const int kWriters = 5, kReaders = 12, kPtrs = 6000;
+    static const int kWriters = 5, kReaders = 12, kPtrs = 3000;
     hazard_tester test;
     for (int i = 0; i < kPtrs; ++i) test.add(i);
     for (int i = 0; i < kPtrs; ++i) test.check_valid(i);
-    static const int numWrites = kPtrs / kWriters; // divides evenly, important!
+    static const int numWrites = kPtrs / kWriters;
+    UASSERT(numWrites * kWriters == kPtrs); // divides evenly, important!
     static const int numReads = kPtrs / kReaders;
 
     vector<future<void> > reader_futs;
     std::atomic<bool> kr_array[kReaders];
+    std::atomic<bool> was_deleted[kPtrs];
     for (auto& ab : kr_array) ab.store(true, std::memory_order_relaxed);
+    for (auto& ab : was_deleted) ab.store(false, std::memory_order_relaxed);
     for (int i = 0; i < kReaders; ++i) reader_futs.push_back(async(
              launch::async, [&](int idx) {
                auto keep_reading = [&]() {
@@ -115,6 +118,8 @@ int main(int, char**) {
                }
                for (int i = start; i < start + numReads; ++i) {
                  test.check_valid(i);
+                 while (!was_deleted[i].load(std::memory_order_relaxed))
+                   std::this_thread::yield();
                  test.overwrite(i);
                  test.reset(i);
                  test.check_reset(i);
@@ -124,16 +129,18 @@ int main(int, char**) {
     for (int i = 0; i < kWriters; ++i) writer_futs.push_back(async(
              launch::async, [&](int idx) {
                const int start = idx * numWrites;
-               for (int i = start; i < start + numWrites; ++i)
+               for (int i = start; i < start + numWrites; ++i) {
                  hazard_ptr<int>::schedule_deletion(test.ptr_at(i));
+                 was_deleted[i].store(true, std::memory_order_relaxed);
+               }
              }, i));
-    // Release half first, just to make sure it's still ok to read even
-    // when gc is going on.
-    for (auto& fut : writer_futs) fut.get();
+    // Release half first.
     for (int i = 0; i < kReaders / 2; ++i)
       kr_array[i].store(false, std::memory_order_relaxed);
     for (int i = 0; i < kReaders / 2; ++i)
       reader_futs[i].get();
+
+    for (auto& fut : writer_futs) fut.get();
 
     // Reap remaining readers.
     for (int i = kReaders / 2; i < kReaders; ++i)
