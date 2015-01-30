@@ -26,6 +26,10 @@
 
 namespace synchro {
 
+namespace _synchro_hazard_internal {
+  class hazard_record;
+} // namespace _synchro_hazard_internal
+
 // hazard_ptr itself is NOT thread safe. However, it may be used to ensure that
 // protected ("acquired") pointers are not deleted, so long as all deletions
 // occur through a call to schedule_deletion().
@@ -74,12 +78,20 @@ class hazard_ptr {
   // 'ptr' need not be owned by any hazard pointers, and can even be
   // used after scheduling deletion, so long as it's protected by a
   // hazard_ptr instance.
+  //
+  // The contract for usage of schedule_deletion() ALSO includes the
+  // responsibility that after it is called, no readers subsequently
+  // acquire new hazard pointers for the parameter pointer. If an
+  // atomic 'unlinking' of the type above occured, this condition is
+  // already met automatically.
   static void schedule_deletion(T* ptr);
 
  private:
-  class _synchro_hazard_internal::hazard_record;
   T* ptr_; // local non-atomic copy.
-  hazard_record* record_;
+  _synchro_hazard_internal::hazard_record* record_;
+
+  // A hack to allow for type-agnostic separate compilation.
+  static void ptr_deleter(void* ptr) { delete static_cast<T*>(ptr); }
 };
 
 } // namespace synchro

@@ -17,32 +17,27 @@ namespace _synchro_hazard_internal {
 // record's pointer from deletion.
 class hazard_record {
  public:
+  hazard_record();
 
-  // Everything but publish into cpp... TODO
-  static hazard_record* activated_record(); // returns fresh activated nonnull
-  static void schedule_deletion(void* ptr); // retires and scans.
+  // Returns a fresh non-null pointer to an activated record.
+  static hazard_record* activated_record();
+  // Marks pointer for deletion. Frees memory occasionally by scanning for
+  // safe pointers to delete (not necessarily this one).
+  typedef void (*deleter_t)(void*);
+  static void schedule_deletion(void* ptr, deleter_t deleter);
+  // Nullifies the protected pointer, then deactivates. No deletion scheduled.
   void deactivate(); // null, then deactivate.
   void publish(void* p) { protected_ptr_.store(p, std::memory_order_relaxed); }
+  void* protected_ptr();
+  hazard_record* next();
 
  private:
+  bool active() const;
+  bool capture();
+
   std::atomic<bool> active_;
   std::atomic<void*> protected_ptr_;
-  std::atomic<hazard_record*> next_;
-
-  // TODO move below to cpp fil
-  //This file maintains the static
-  // executable-wide hazard pointer list and thread-local retired lists.
-  //
-  // There is some justification for the use of a static list like this.
-  // It's already thread-safe, especially since C++11 blesses multi-threaded
-  // static initialization. Furthermore, there are no issues with loading this
-  // as a dynamic library; the loaded file will just maintain its own list
-  // until unlink time.
-  struct hazard_list {
-    ~hazard_list();
-    hazard_record head_;
-  };
-  static hazard_list global_list_;
+  hazard_record* next_;
 };
 
 } // namespace _synchro_hazard_internal
@@ -82,7 +77,7 @@ void hazard_ptr<T>::acquire(T* ptr) {
 }
 
 template<typename T>
-void hazard_ptr<T>::acquire(std::atomic<T*> ptr) {
+void hazard_ptr<T>::acquire(const std::atomic<T*>& ptr) {
   T* oldval, newval = ptr.load(std::memory_order_relaxed);
   do {
     oldval = newval;
@@ -94,7 +89,7 @@ void hazard_ptr<T>::acquire(std::atomic<T*> ptr) {
 
 template<typename T>
 void hazard_ptr<T>::schedule_deletion(T* ptr) {
-  _synchro_hazard_internal::hazard_ptr::schedule_deletion(ptr);
+  _synchro_hazard_internal::hazard_record::schedule_deletion(ptr, ptr_deleter);
 }
 
 } // namespace synchro

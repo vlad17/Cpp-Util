@@ -2,6 +2,7 @@
 
 ADD_LIB(
   countdown_latch.cpp
+  hazard.cpp
   rwlock.cpp
 )
 
