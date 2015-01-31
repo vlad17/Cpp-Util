@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# Only run in project directory root.
 # really quick build script to just quickly check correctness (before commiting)
 
 set -e

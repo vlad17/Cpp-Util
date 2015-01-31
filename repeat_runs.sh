@@ -4,6 +4,11 @@
 #
 # This is useful for coaxing hard bugs that only arise with rare thread
 # interleavings.
+#
+# Should only be run in the project directory root.
+# 
+# Currently this runs the mpmc-test.exe, which is most susceptible to those
+# kinds of bugs.
 
 mode="$1"
 runs="$2"
@@ -26,4 +31,5 @@ for i in `seq 1 $runs`; do
   fi
 done
 
-
+echo
+echo "Ran all repeat runs SUCCESSFULLY!"
