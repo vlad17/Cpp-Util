@@ -229,7 +229,7 @@ void hazard_record::schedule_deletion(void* ptr, deleter_t deleter) {
 }
 
 void hazard_record::deactivate() {
-  // Note that this order is important (and is inforced by std::atomic).
+  // Note that this order is important (and is enforced by std::atomic).
   // We deactivate only after nulling the pointer, thus maintaining the
   // invariant that all deactivated hazard records have their 'protected_ptr_'
   // set to nullptr. This enables scanning deleting threads to just check

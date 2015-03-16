@@ -4,8 +4,8 @@
   2015-01-28
 
   Hazard pointer interface. Allows implementation of lockfree data structures.
-  In particular, hazard pointers enable their users to mark data as "in-use."
-  Which in turn prevents any deletions scheduled by a proxy method in the class
+  In particular, hazard pointers enable their users to mark data as "in-use,"
+  which in turn prevents any deletions scheduled by a proxy method in the class
   to occur.
 
   Implementation based on the following link:
