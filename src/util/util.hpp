@@ -16,6 +16,9 @@
 
 // TODO cleanup the below
 
+#include <string>
+#include <sstream>
+
 namespace util {
 
 template<typename Iterator>
@@ -63,6 +66,22 @@ class scref {
  public:
   typedef typename aux<std::is_scalar<T>::value, T>::type type;
 };
+
+/* Prints out using the ostream operator a container (not necessarily a vector),
+   anything with begin/end, prettily. */
+template<typename C>
+std::string container_print(const C& vec) {
+  std::stringstream vecstream;
+  vecstream << "[";
+  if (!vec.empty()) {
+    auto it = vec.begin();
+    vecstream << *it++;
+    for (; it != vec.end(); ++it)
+      vecstream << ", " << *it;
+  }
+  vecstream << "]";
+  return vecstream.str();
+}
 
 }
 

@@ -1,12 +1,17 @@
 cmake_minimum_required(VERSION 2.6)
 project(Cpp_Util)
 
-# Assertions can be controlled with -DASSERTIONS_ON
-# by default they are on in debug but off in release.
+# Assertions can be controlled with -DASSERTIONS
+# 0 (or anything not 1 or 2) - on in debug but off in release.
+# 1 - manually activated
+# 2 - manually deactivated
 
-if(${ASSERTIONS_ON})
-  message("overwriting build setting and using assertions")
-  add_definitions(-DUSE_UASSERT)
+if(${ASSERTIONS} EQUAL 1)
+  message("overwriting build setting and enabling assertions")
+  add_definitions(-DUSE_UASSERT=1)
+elseif(${ASSERTIONS} EQUAL 2)
+  message("overwriting build setting and disabling assertions")
+  add_definitions(-DUSE_UASSERT=0)
 endif()
 
 # Boost

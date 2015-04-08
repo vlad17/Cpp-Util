@@ -5,3 +5,4 @@ ADD_LIB(
 )
 
 ADD_EXEC(util-test)
+ADD_EXEC(sort-test)
