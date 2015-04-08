@@ -95,7 +95,7 @@ void cache_test(T lhc) {
   {
     int test = gen()%MAX_KEYSIZE;
     auto ptrtest = lhc2.lookup(test);
-    UASSERT(ptrtest != nullptr && *ptrtest != test)
+    UASSERT(ptrtest == nullptr || *ptrtest == test)
         << "\tError: value " << test << " not matched with key\n";
     if(ptrtest == nullptr)
       lhc2.insert(make_pair(test,test));

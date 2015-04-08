@@ -16,8 +16,9 @@ ctest -j`nproc`
 
 Other cmake options are:
 -DCMAKE_BUILD_TYPE=(debug|release) - specifies build setting
--DASSERTIONS_ON=(1|0) - specifies whether to turn on assertions, on by default for debug
-  and off by default for release (this flag overrides those defaults).
+-DASSERTIONS=(0|1|2) - specifies whether to turn on assertions, on by default
+  for debug and off by default for release. Default behavior is 0 (or unset flag)
+  Manual enabling is possible by setting 1, disabling with 2.
         
 For quick building and testing, use "chmod 700 build-and-test.sh"
 Then ./build-and-test.sh
@@ -25,7 +26,6 @@ Then ./build-and-test.sh
 TODO:
         hazard_queue is_lock_free overload.
         try using spinlocks instead of mutexes in the atomic_shared_ptr (the lock doesn't have to protect much, so it's probably better if you generate a lot of atomic_shared_ptrs).
-        asserts computes EVERYTHING, even if nothing is printed. Figure it out. Potential option is to use an (if (condition) {} else outstream ) as a macro, but this seems dangerous. Perhaps check out what google LOG(...) << ... does.
         Try to beat the boost lockfree::queue
         document throws for pthreads (look at the "too many readers" return val, maybe spin?)        cache and fibheap are terribly slow. speed them up.
         minimal flag parser

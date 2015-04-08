@@ -10,11 +10,11 @@ cmake . -DCMAKE_BUILD_TYPE=debug
 make -j$NJOBS
 ctest -j$NJOBS
 
-cmake . -DCMAKE_BUILD_TYPE=release -DASSERTIONS_ON=1
+cmake . -DCMAKE_BUILD_TYPE=release -DASSERTIONS=1
 make -j$NJOBS
 ctest -j$NJOBS
 
-cmake . -DCMAKE_BUILD_TYPE=release -DASSERTIONS_ON=0
+cmake . -DCMAKE_BUILD_TYPE=release -DASSERTIONS=2
 make -j$NJOBS
 ctest -j$NJOBS
 

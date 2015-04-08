@@ -31,24 +31,21 @@ const char* sansdirectory(const char* file) {
 }
 } // anonymous namespace
 
-streamer::streamer(bool print, const char* file, long line, const char* expr) :
-    print_(print),
+streamer::streamer(const char* file, long line, const char* expr) :
     file_(file),
     line_(line),
     expr_(expr) {}
 
 streamer::~streamer() {
-  if (print_) {
-    stringstream sstr;
-    sstr << sansdirectory(file_) << ":" << line_
-         << " Expr \'" << expr_ << "\' failed";
-    string str = sstr_.str();
-    if (!str.empty()) sstr << ": " << str;
-    else sstr << ".";
-    sstr << "\n";
-    cerr << sstr.str();
-    exit(EXIT_FAILURE);
-  }
+  stringstream sstr;
+  sstr << sansdirectory(file_) << ":" << line_
+       << " Expr \'" << expr_ << "\' failed";
+  string str = sstr_.str();
+  if (!str.empty()) sstr << ": " << str;
+  else sstr << ".";
+  sstr << "\n";
+  cerr << sstr.str();
+  exit(EXIT_FAILURE);
 }
 
 void streamer::unexpected() {

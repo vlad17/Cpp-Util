@@ -49,8 +49,8 @@
 // message is broken up into several different types. A newline
 // is automatically appended at the end of the message.
 #if USE_UASSERT
-#define UASSERT(expr) \
-  util::_util_uassert_internal::streamer(!(expr), __FILE__, __LINE__, #expr)
+#define UASSERT(expr) if ((expr)) {} else \
+  util::_util_uassert_internal::streamer(__FILE__, __LINE__, #expr)
 #else
 #include <util/nullstream.hpp>
 #define UASSERT(expr) if ((expr) || true) {} else util::nullstream{}
@@ -64,18 +64,16 @@ namespace _util_uassert_internal {
 
 class streamer {
  public:
-  streamer(bool print, const char* file, long line, const char* expr);
+  streamer(const char* file, long line, const char* expr);
   ~streamer();
   template<class T>
   streamer& operator<<(const T& t) {
-    if (!print_) return *this;
     try { sstr_ << t; } catch (...) { unexpected(); }
     return *this;
   }
  private:
   void unexpected();
   std::stringstream sstr_;
-  const bool print_;
   const char* file_;
   const long line_;
   const char* expr_;
