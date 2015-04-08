@@ -87,7 +87,7 @@ void cache_test(T lhc) {
   cout << "after move (from assignment value) - size: " << lhc.size() ; cout << endl;
   lhc2.clear();
 
-#if (defined(NDEBUG) && !USE_UASSERT)
+#ifdef NDEBUG
   cout << "stress tests for heap cache...." << endl;
   int constexpr STRESS_REPS = 1024 * 1024;
   int constexpr MAX_KEYSIZE = STRESS_REPS/100;
@@ -95,8 +95,8 @@ void cache_test(T lhc) {
   {
     int test = gen()%MAX_KEYSIZE;
     auto ptrtest = lhc2.lookup(test);
-    if(ptrtest != nullptr && *ptrtest != test)
-      cout << "\tError: value " << test << " not matched with key" << endl;
+    UASSERT(ptrtest != nullptr && *ptrtest != test)
+        << "\tError: value " << test << " not matched with key\n";
     if(ptrtest == nullptr)
       lhc2.insert(make_pair(test,test));
   }

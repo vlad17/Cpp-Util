@@ -16,9 +16,7 @@ namespace util {
 class nullstream : public std::ostream {
  public:
   template<typename T>
-  inline const nullstream& operator<<(const T&) const {
-    return *this;
-  }
+  inline nullstream& operator<<(const T&) { return *this; }
 };
 
 } // namespace util

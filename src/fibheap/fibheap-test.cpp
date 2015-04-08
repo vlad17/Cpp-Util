@@ -108,7 +108,7 @@ int main() {
   cout << "heap value after move:" << endl;
   cout << f << endl;
   cout << "Stress test for fibheap..." << endl;
-#if (defined(NDEBUG) && !USE_UASSERT)
+#ifdef NDEBUG
   int constexpr STRESS_REPS = 100000;
 #else
   int constexpr STRESS_REPS = 1000;
