@@ -16,6 +16,7 @@
 
 // TODO cleanup the below
 
+#include <iterator>
 #include <string>
 #include <sstream>
 
@@ -74,9 +75,9 @@ std::string container_print(const C& vec) {
   std::stringstream vecstream;
   vecstream << "[";
   if (!vec.empty()) {
-    auto it = vec.begin();
+    auto it = std::begin(vec);
     vecstream << *it++;
-    for (; it != vec.end(); ++it)
+    for (; it != std::end(vec); ++it)
       vecstream << ", " << *it;
   }
   vecstream << "]";

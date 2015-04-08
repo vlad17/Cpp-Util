@@ -6,10 +6,10 @@ project(Cpp_Util)
 # 1 - manually activated
 # 2 - manually deactivated
 
-if(${ASSERTIONS} EQUAL 1)
+if("${ASSERTIONS}" EQUAL 1)
   message("overwriting build setting and enabling assertions")
   add_definitions(-DUSE_UASSERT=1)
-elseif(${ASSERTIONS} EQUAL 2)
+elseif("${ASSERTIONS}" EQUAL 2)
   message("overwriting build setting and disabling assertions")
   add_definitions(-DUSE_UASSERT=0)
 endif()

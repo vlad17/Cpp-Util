@@ -24,6 +24,7 @@
 
 #include "util/timer.hpp"
 #include "util/uassert.hpp"
+#include "util/util.hpp"
 #include "queues/queue.hpp"
 #include "queues/shared_queue.hpp"
 #include "queues/hazard_queue.hpp"
@@ -61,7 +62,6 @@ class boost_queue {
 };
 #endif /* HAVE_BOOST */
 
-template<class T> string prvec(const T&);
 vector<int> read_strvec(string);
 
 int main(int argc, char** argv) {
@@ -115,20 +115,6 @@ void complete(const string& s = "...complete", std::ostream& outs = cout) {
   outs << right << s << endl;
 }
 
-template<typename C>
-string prvec(const C& vec) {
-  stringstream vecstream;
-  vecstream << "[";
-  if (!vec.empty()) {
-    auto it = vec.begin();
-    vecstream << *it++;
-    for (; it != vec.end(); ++it)
-      vecstream << ", " << *it;
-  }
-  vecstream << "]";
-  return vecstream.str();
-}
-
 template<class X>
 string as_string(const X& x) {
   stringstream sstr;
@@ -139,7 +125,7 @@ string as_string(const X& x) {
 // X should print [...]
 template<class X>
 bool same(const X& x, const vector<int>& vec) {
-  return as_string(x) == prvec(vec);
+  return as_string(x) == util::container_print(vec);
 }
 
 template<template<typename> class T>
