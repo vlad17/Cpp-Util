@@ -20,5 +20,7 @@ ctest -j$NJOBS
 
 ./release/mpmc-test.exe bench
 
+rm -rf CMakeFiles/ CMakeCache.txt
+
 echo
 echo "Ran all tests SUCCESSFULLY!"

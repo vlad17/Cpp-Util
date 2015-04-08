@@ -21,10 +21,12 @@ namespace util {
 //
 // The signature of the digit function should be compatible with the following:
 //
-//   int DigitAt::operator()(intt, const T&)
+//   int DigitAt::operator()(int, const T&)
 //
 // where T = decltype(*first), the first argument is the index (in the case
 // of msd - most significant digit - this is the index reading left-to-right).
+// The integer passed to the above operator will never be negative.
+// 'digit_of' should be pure from the sort's perspective.
 template<size_t Radix, typename RandomIt, typename DigitAt>
 void msd_in_place_radix(RandomIt first, RandomIt last, DigitAt digit_of);
 
