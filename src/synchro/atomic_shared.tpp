@@ -43,8 +43,11 @@ class locked_shared_ptr : public std::shared_ptr<T> {
 // If the function does not exist, then the decltype below will cause a
 // substitution failure.
 template<class T>
-constexpr auto has_atomic_overloads_f(T* t) -> decltype(
-    std::atomic_compare_exchange_weak(t, t, *t)) {
+constexpr auto has_atomic_overloads_f(T*) -> decltype(
+    std::atomic_compare_exchange_weak(
+        std::declval<T*>(),
+        std::declval<T*>(),
+        *std::declval<T*>())) {
     return true;
 }
 

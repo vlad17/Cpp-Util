@@ -60,7 +60,7 @@ RandomIt msd_in_place_recursive(RandomIt first, RandomIt end, DigitAt digit_of,
   // Compute each bucket's offset.
   std::partial_sum(counts.begin(), counts.end(), counts.begin());
 
-  for (auto bucket = 0; bucket < Radix; ++bucket)
+  for (std::size_t bucket = 0; bucket < Radix; ++bucket)
     while (num_remaining[bucket] > 0) {
       auto i = counts[bucket];
       auto target = digit_of(index, first[i]) + 1;
