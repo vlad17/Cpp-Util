@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <chrono>
 #include <iostream>
 #include <functional>
 #include <limits>
@@ -16,6 +17,7 @@
 
 #include "util/radix.hpp"
 #include "util/line_wrap.hpp"
+#include "util/timer.hpp"
 #include "util/uassert.hpp"
 #include "util/util.hpp"
 
@@ -64,28 +66,46 @@ int uint32_digit_at(int index, uint32_t val) {
   return byte;
 }
 
+void bench_uints() {
+  start("Benching 10M uint32 sort");
+
+  TIME_BLOCK(chrono::milliseconds, "") {
+  }
+}
+
+void bench_strings() {
+  start("Benching 1M rand-len string sort");
+
+  TIME_BLOCK(chrono::milliseconds, "") {
+  }
+}
+
 } // anonymous namespace
 
 int main(int argc, char* argv[]) {
 
   if (argc == 2 && string(argv[1]) == "bench") {
+    cout << endl;
+    cout << "Benching MSD in-place radix sort" << endl;
+    bench_uints();
+    bench_strings();
+    return 0;
   }
 
   cout << endl;
   cout << "Testing MSD in-place radix sort" << endl;
-  cout << endl;
 
 
   start("String sort");
   test_sort(string_examples, bind(
-      msd_in_place_radix_recursive<STRING_RADIX, vector<string>::iterator,
+      msd_in_place_radix<STRING_RADIX, vector<string>::iterator,
       decltype(string_digit_at)>, placeholders::_1, placeholders::_2,
       string_digit_at));
   complete();
 
   start("Uint32 sort");
   test_sort(uint32_examples, bind(
-      msd_in_place_radix_recursive<UINT32_RADIX, vector<uint32_t>::iterator,
+      msd_in_place_radix<UINT32_RADIX, vector<uint32_t>::iterator,
       decltype(uint32_digit_at)>, placeholders::_1, placeholders::_2,
       uint32_digit_at));
   complete();

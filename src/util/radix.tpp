@@ -78,8 +78,8 @@ RandomIt msd_in_place_recursive(RandomIt first, RandomIt end, DigitAt digit_of,
 
 } // namespace internal
 
-template<size_t Radix, typename RandomIt, typename DigitAt>
-void msd_in_place_radix_recursive(RandomIt first, RandomIt last, DigitAt digit_of) {
+template<std::size_t Radix, typename RandomIt, typename DigitAt>
+void msd_in_place_radix(RandomIt first, RandomIt last, DigitAt digit_of) {
   std::array<int, (Radix + 2)> counts;
   // TODO: potential optimization would be to remove the 'num_remaining'
   // in favor of keeping a single variable 'i' that tracks progress of the

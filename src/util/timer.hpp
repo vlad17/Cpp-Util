@@ -1,7 +1,7 @@
 /*
   Vladimir Feinberg
   util/timer.h
-  2014-09-08
+  2016-09-08
 
   Timing macro.
 */
@@ -11,6 +11,8 @@
 
 #include <chrono>
 #include <iostream>
+
+#include "util/memory.hpp"
 
 // Parameters:
 // unit - std::chrono unit type
@@ -29,10 +31,12 @@
 // }
 // The above would print "Time to add 1 + 1: 0ms" followed by a newline.
 #define TIME_BLOCK(unit, msg)                                               \
-  for (auto start = std::chrono::high_resolution_clock::now(), end = start; \
-       start == end ||                                                      \
-           util::_timer_internal::print_ret_false<unit>(start, end, msg);   \
-       end = std::chrono::high_resolution_clock::now())
+  for (auto end = util::uniquep(                                            \
+           std::chrono::high_resolution_clock::now()),                      \
+         start = std::move(end);                                            \
+       !end ||                                                              \
+           util::_timer_internal::print_ret_false<unit>(*start, *end, msg); \
+       end = util::uniquep(std::chrono::high_resolution_clock::now()))
 
 namespace util {
 namespace _timer_internal {

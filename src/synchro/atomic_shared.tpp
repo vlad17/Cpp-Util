@@ -11,14 +11,12 @@
 #include <mutex>
 #include <type_traits>
 
+#include "util/memory.hpp"
+
 namespace synchro {
 namespace _synchro_atomic_shared_internal {
 
-// Overload in this namespace while waiting for C++14...
-template<class T, class... Args>
-std::unique_ptr<T> make_unique(Args&&... args) {
-  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
+using util::make_unique;
 
 typedef std::mutex lock_type;
 typedef std::lock_guard<lock_type> lock_guard;
