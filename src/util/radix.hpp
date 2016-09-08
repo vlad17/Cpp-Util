@@ -27,8 +27,8 @@ namespace util {
 // of msd - most significant digit - this is the index reading left-to-right).
 // The integer passed to the above operator will never be negative.
 // 'digit_of' should be pure from the sort's perspective.
-template<size_t Radix, typename RandomIt, typename DigitAt>
-void msd_in_place_radix(RandomIt first, RandomIt last, DigitAt digit_of);
+template<std::size_t Radix, typename RandomIt, typename DigitAt>
+void msd_in_place_radix_recursive(RandomIt first, RandomIt last, DigitAt digit_of);
 
 } // namespace util
 

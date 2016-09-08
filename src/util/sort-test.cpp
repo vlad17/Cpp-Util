@@ -73,11 +73,11 @@ int main(int, char**) {
   cout << endl;
 
   test_sort(string_examples, bind(
-      msd_in_place_radix<STRING_RADIX, vector<string>::iterator,
+      msd_in_place_radix_recursive<STRING_RADIX, vector<string>::iterator,
       decltype(string_digit_at)>, placeholders::_1, placeholders::_2,
       string_digit_at));
   test_sort(uint32_examples, bind(
-      msd_in_place_radix<UINT32_RADIX, vector<uint32_t>::iterator,
+      msd_in_place_radix_recursive<UINT32_RADIX, vector<uint32_t>::iterator,
       decltype(uint32_digit_at)>, placeholders::_1, placeholders::_2,
       uint32_digit_at));
 

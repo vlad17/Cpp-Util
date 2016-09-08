@@ -79,7 +79,7 @@ RandomIt msd_in_place_recursive(RandomIt first, RandomIt end, DigitAt digit_of,
 } // namespace internal
 
 template<size_t Radix, typename RandomIt, typename DigitAt>
-void msd_in_place_radix(RandomIt first, RandomIt last, DigitAt digit_of) {
+void msd_in_place_radix_recursive(RandomIt first, RandomIt last, DigitAt digit_of) {
   std::array<int, (Radix + 2)> counts;
   // TODO: potential optimization would be to remove the 'num_remaining'
   // in favor of keeping a single variable 'i' that tracks progress of the
@@ -88,5 +88,8 @@ void msd_in_place_radix(RandomIt first, RandomIt last, DigitAt digit_of) {
   internal::msd_in_place_recursive(
       first, last, digit_of, 0, counts, num_remaining);
 }
+
+  // TODO: non-recursive based msd in place radix to beat built-in string sort?
+  // TODO: how does it compare to three-way radix?
 
 } // namespace util
