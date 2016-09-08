@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "util/radix.hpp"
+#include "util/line_wrap.hpp"
 #include "util/uassert.hpp"
 #include "util/util.hpp"
 
@@ -30,7 +31,6 @@ void test_sort(const E& examples, const S& sorter) {
     auto sys = i;
     sorter(user.begin(), user.end());
     std::sort(sys.begin(), sys.end());
-    cout.flush(); // TODO rm
     bool equal = std::equal(user.begin(), user.end(), sys.begin());
     UASSERT(equal) << "User sort (1) <> Sys sort (2)\n"
                    << "\t(1) " << container_print(user) << "\n"
@@ -66,23 +66,32 @@ int uint32_digit_at(int index, uint32_t val) {
 
 } // anonymous namespace
 
-int main(int, char**) {
+int main(int argc, char* argv[]) {
+
+  if (argc == 2 && string(argv[1]) == "bench") {
+  }
 
   cout << endl;
   cout << "Testing MSD in-place radix sort" << endl;
   cout << endl;
 
+
+  start("String sort");
   test_sort(string_examples, bind(
       msd_in_place_radix_recursive<STRING_RADIX, vector<string>::iterator,
       decltype(string_digit_at)>, placeholders::_1, placeholders::_2,
       string_digit_at));
+  complete();
+
+  start("Uint32 sort");
   test_sort(uint32_examples, bind(
       msd_in_place_radix_recursive<UINT32_RADIX, vector<uint32_t>::iterator,
       decltype(uint32_digit_at)>, placeholders::_1, placeholders::_2,
       uint32_digit_at));
+  complete();
 
-  cout << endl;
-  cout << "\t...Complete!" << endl;
+  start("");
+  complete("...........Success!");
   cout << endl;
 
   return 0;

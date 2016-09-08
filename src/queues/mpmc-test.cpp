@@ -22,6 +22,7 @@
 #include <boost/lockfree/queue.hpp>
 #endif /* HAVE_BOOST */
 
+#include "util/line_wrap.hpp"
 #include "util/timer.hpp"
 #include "util/uassert.hpp"
 #include "util/util.hpp"
@@ -30,6 +31,7 @@
 #include "queues/hazard_queue.hpp"
 
 using namespace std;
+using namespace util;
 using namespace queues;
 
 template<template<typename> class T>
@@ -74,15 +76,15 @@ int main(int argc, char** argv) {
     cout << "MPMC Queue Unit Tests..." << endl;
 
     cout << "\nShared Queue" << endl;
-    cout << "\tUnit testing:" << endl;
+    cout << "  Unit testing:" << endl;
     unit_test<shared_queue>();
-    cout << "\tMultithreaded test:" << endl;
+    cout << "  Multithreaded test:" << endl;
     test_multithreaded<shared_queue>();
 
     cout << "\nHazard Queue" << endl;
-    cout << "\tUnit testing:" << endl;
+    cout << "  Unit testing:" << endl;
     unit_test<hazard_queue>();
-    cout << "\tMultithreaded test:" << endl;
+    cout << "  Multithreaded test:" << endl;
     test_multithreaded<hazard_queue>();
 
   } else {
@@ -102,17 +104,6 @@ int main(int argc, char** argv) {
     bench_queue<hazard_queue>();
   }
   return 0;
-}
-
-// TODO wrap s if longer that 40 chars (and adjust below test names)
-void start(const string& s, std::ostream& outs = cout) {
-  outs << '\t' << left << setw(40);
-  outs << s;
-  outs.flush();
-}
-
-void complete(const string& s = "...complete", std::ostream& outs = cout) {
-  outs << right << s << endl;
 }
 
 template<class X>
@@ -219,7 +210,7 @@ template<template<typename> class T>
 void test_multithreaded() {
   static const int kNumEnqueuers = 10;
   static const int kItemsPerEnqueuer = 2000;
-  cout << "\tTesting concurrent enqueues and validity, "
+  cout << "  Testing concurrent enqueues and validity, "
        << kNumEnqueuers << " enqueuers x " << kItemsPerEnqueuer << " items"
        << endl;
 
@@ -298,7 +289,7 @@ void test_multithreaded() {
   // as were put in (don't make dequeuers dequeue empty)
   static const int kNumDequeuers = kNumEnqueuers;
   static const int kItemsPerDequeuer = kItemsPerEnqueuer;
-  cout << "\tTesting concurrent dequeues and validity, "
+  cout << "  Testing concurrent dequeues and validity, "
        << kNumDequeuers << " dequeuers x " << kItemsPerDequeuer << " items"
        << endl;
   start("concurrent pops");
@@ -349,11 +340,11 @@ void test_multithreaded() {
   static const int kDesiredRandomizedNum = 1000;
   static const int kRandomizedNum =
     (kDesiredRandomizedNum / kRandomizedNumEnqueuers) * kRandomizedNumEnqueuers;
-  cout << "\tEnqueue/Dequeue testing (pause after enqueuing " << kInterval
+  cout << "  Enqueue/Dequeue testing (pause after enqueuing " << kInterval
        << " to encourage dequeuers),\n"
-       << "\t\tenqueue: " << kRandomizedNumEnqueuers << "\n"
-       << "\t\tdequeue: " << kRandomizedNumDequeuers << " (test empty edge case)\n"
-       << "\t\tNumber of items: " << kRandomizedNum << endl;
+       << "    enqueue: " << kRandomizedNumEnqueuers << "\n"
+       << "    dequeue: " << kRandomizedNumDequeuers << " (test empty edge case)\n"
+       << "    Number of items: " << kRandomizedNum << endl;
   start("Enqueue/dequeue");
 
   cdl.store(kRandomizedNumEnqueuers + kRandomizedNumDequeuers);
@@ -441,7 +432,7 @@ void bench_queue() {
 
   static const int kNumEnqueuers = nthreads();
   static const int kItemsPerEnqueuer = 100000;
-  cout << "\tEnqueues (" << kNumEnqueuers << "x"
+  cout << "  Enqueues (" << kNumEnqueuers << "x"
        << kItemsPerEnqueuer << "): ";
   cout.flush();
 
@@ -469,7 +460,7 @@ void bench_queue() {
 
   static const int kNumDequeuers = kNumEnqueuers;
   static const int kItemsPerDequeuer = kItemsPerEnqueuer;
-  cout << "\tDequeues (" << kNumEnqueuers << "x"
+  cout << "  Dequeues (" << kNumEnqueuers << "x"
        << kItemsPerEnqueuer << "): ";
   cout.flush();
 
@@ -498,7 +489,7 @@ void bench_queue() {
   static const int kEqualWeightEnqueuers = nthreads() / 2;
   static const int kEqualWeightDequeuers = kEqualWeightEnqueuers;
 
-  cout << "\tFair mpmc (~" << kItems << " items, "
+  cout << "  Fair mpmc (~" << kItems << " items, "
        << kEqualWeightEnqueuers << " enq, "
        << kEqualWeightDequeuers << " deq): ";
   cout.flush();
@@ -510,7 +501,7 @@ void bench_queue() {
   static const int kEWEnqueuers =
       nthreads() - kEWDequeuers;
 
-  cout << "\tEnqueue-weighted mpmc (~" << kItems << " items, "
+  cout << "  Enqueue-weighted mpmc (~" << kItems << " items, "
        << kEWEnqueuers << " enq, " << kEWDequeuers << " deq): ";
   cout.flush();
 
@@ -521,7 +512,7 @@ void bench_queue() {
   static const int kDWDequeuers =
       nthreads() - kDWEnqueuers;
 
-  cout << "\tDequeue-weighted mpmc (~" << kItems << " items, "
+  cout << "  Dequeue-weighted mpmc (~" << kItems << " items, "
        << kDWEnqueuers << " enq, " << kDWDequeuers << " deq): ";
   cout.flush();
 
