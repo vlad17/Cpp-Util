@@ -55,28 +55,65 @@ vector<vector<uint32_t> > uint32_examples = {
 
 const size_t STRING_RADIX = 256;
 int string_digit_at(size_t index, const string& str) {
-  if (index < str.length()) return static_cast<unsigned>(str[index]);
+  if (index < str.length()) {
+    return static_cast<unsigned char>(str[index]);
+  }
   return -1;
 }
 
 const size_t UINT32_RADIX = 256;
 int uint32_digit_at(int index, uint32_t val) {
-  if (index > 4) return -1;
-  unsigned char byte = val >> 8 * (4 - index - 1);
+  UASSERT(index >= 0) << "index " << index;
+  if (index >= 4) return -1;
+  unsigned char byte = (val >> 8 * (4 - index - 1)) & 0xFF;
   return byte;
 }
 
 void bench_uints() {
-  start("Benching 10M uint32 sort");
+  start("1M uint32");
 
-  TIME_BLOCK(chrono::milliseconds, "") {
+  vector<uint32_t> backup(1000 * 1000, 0);
+  for (auto& i : backup) i = std::rand();
+  auto uints = backup;
+
+  // warmup before
+
+  TIME_BLOCK(std::chrono::milliseconds, "") {
+    msd_in_place_radix<UINT32_RADIX>(
+        uints.begin(), uints.end(), uint32_digit_at);
+  }
+
+  for (std::size_t i = 0; i < uints.size(); ++i) uints[i] = backup[i];
+
+  start("  std::sort for comparison");
+  TIME_BLOCK(std::chrono::milliseconds, "") {
+    std::sort(uints.begin(), uints.end());
   }
 }
 
 void bench_strings() {
-  start("Benching 1M rand-len string sort");
+  start("1M rand-len (max 20) string");
 
-  TIME_BLOCK(chrono::milliseconds, "") {
+  const int max_size = 20;
+
+  vector<std::string> backup(1000 * 1000, "");
+  for (auto& i : backup) {
+    // true modulo, works for negatives.
+    auto len = ((std::rand() % max_size) + max_size) % max_size;
+    for (int j = 0; j < len; ++j) {
+      i += static_cast<char>(std::rand());
+    }
+  }
+  auto strs = backup;
+
+  TIME_BLOCK(std::chrono::milliseconds, "") {
+    msd_in_place_radix<STRING_RADIX>(strs.begin(), strs.end(), string_digit_at);
+  }
+
+  for (std::size_t i = 0; i < strs.size(); ++i) strs[i] = backup[i];
+  start("  std::sort for comparison");
+  TIME_BLOCK(std::chrono::milliseconds, "") {
+    std::sort(strs.begin(), strs.end());
   }
 }
 
@@ -87,6 +124,10 @@ int main(int argc, char* argv[]) {
   if (argc == 2 && string(argv[1]) == "bench") {
     cout << endl;
     cout << "Benching MSD in-place radix sort" << endl;
+    auto time =
+      std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    cout << "    Using seed: " << time << endl;
+    std::srand(time);
     bench_uints();
     bench_strings();
     return 0;

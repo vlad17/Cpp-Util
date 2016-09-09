@@ -15,13 +15,13 @@
 namespace util {
 
 void start(const std::string& s, std::ostream& outs = std::cout) {
-  int start = 0;
-  if (s.length() > 40) {
-    outs << "    " << s.substr(start, 40) << std::endl;
-    start += 40;
+  std::size_t start = 0;
+  while (start + 40 < s.length()) {
+    auto sz = std::min<std::size_t>(s.length() - start, 40);
+    outs << "    " << s.substr(start, sz) << std::endl;
+    start += sz;
   }
-  outs << "    " << std::left << std::setw(40);
-  outs << s;
+  outs << "    "  << std::left << std::setw(40) << s.substr(start);
   outs.flush();
 }
 
