@@ -62,6 +62,8 @@ Then `./build-and-test.sh`.
 
 ### TODO
 
+  * For speedup, notice we can just always choose to create a new hazard_record. Investigate via valgrind why memory consumption for `hazard_queue` is so large.
+  * Investigate if hazard pointer re-use before deletion creates a leak in the rlist (fix by using a set instead of vector for rlist)
   * `hazard_queue::is_lock_free` overload.
   * try using spinlocks instead of mutexes in the `atomic_shared_ptr` (the lock doesn't have to protect much, so it's probably better if you generate a lot of `atomic_shared_ptrs`).
   * Try to beat the `boost::lockfree::queue`
